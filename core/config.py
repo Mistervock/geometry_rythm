@@ -1,11 +1,15 @@
 
 #-- Импорт
 import os
+import sys
 
 import pygame
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(BASE_DIR)
+if getattr(sys, "frozen", False):
+    ROOT_DIR = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    ROOT_DIR = os.path.dirname(BASE_DIR)
 
 
 def res(*parts):

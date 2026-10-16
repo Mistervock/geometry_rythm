@@ -1,167 +1,113 @@
 # Geometry Rhythm
 
-[English](#english) | [Русский](#русский)
+Ритм-игра по геометрии в стиле Geometry Catcher. Четыре дорожки на клавиатуре, удержания, авто-разметка песен через NumPy и редактор чартов.
 
-## English
+## Запуск
 
-**Geometry Rhythm** is a rhythm game built with Python and Pygame. Press the keys in time with the music and hit notes as they reach the judgment line.
-
-The project is inspired by **Friday Night Funkin' (FNF)**, but it is an independent fan-made project and is not an official FNF release.
-
-### Features
-
-- Four note lanes.
-- Timing judgments, score, combo, and health.
-- Hold notes.
-- A chart editor for creating and editing note charts.
-- Automatic chart generation using audio analysis.
-- Saving charts and settings.
-
-### Gameplay
-
-1. Start the game and select an available song/chart.
-2. Watch the notes move toward the judgment line.
-3. Press the key for the corresponding lane when a note reaches the line.
-4. For hold notes, press and hold the corresponding key until the note ends.
-5. Aim for accurate timing to improve your score and combo. Misses may reduce your health.
-
-#### Controls
-
-| Key | Lane |
-| --- | --- |
-| `D` | Lane 1 |
-| `F` | Lane 2 |
-| `J` | Lane 3 |
-| `K` | Lane 4 |
-
-On-screen hints in the menus and editor may provide additional controls.
-
-### Chart editor
-
-The editor lets you create charts and change note placement for a song. Use the timing grid, scrolling, and zoom controls to place notes accurately. Undo is supported. Save your chart and test it in gameplay.
-
-### Automatic chart generation
-
-The generator analyzes the audio signal and looks for prominent changes or beats to suggest note placement. This is a starting point, not a guaranteed finished chart: results depend on the genre, mix, and structure of the track. Review the timing and adjust the notes in the editor after generation.
-
-### Installation and launch
-
-Python 3 and the project's dependencies are required. Clone the repository:
-
-```bash
-git clone https://github.com/Mistervock/geometry_rythm.git
-cd geometry_rythm
+```
+pip install -r requirements.txt
+python main.py
 ```
 
-Install the dependencies if the repository contains `requirements.txt`:
+Нужны `pygame>=2.1` и `numpy>=1.24` (NumPy нужен только для авто-разметки; без него игра и редактор работают).
 
-```bash
-python -m pip install -r requirements.txt
+## Структура
+
+```
+main.py              точка входа (меню, маршрутизация экранов)
+core/                весь код игры, шрифты и звуки
+  config.py          константы, пути (res() — ресурсы core, root() — songs/ и data/)
+  chart.py           Note и Chart: ноты, удержания, JSON
+  game.py            игровой режим: отсчёт, ноты, удержания, HP, комбо
+  editor.py          редактор чартов
+  autochart.py       авто-разметка на NumPy
+  cache.py           заранее созданные спрайты, кольца и подписи
+  events.py          события песни: глюк, вспышка, картинка (БЕТА)
+  events_screen.py   редактор событий
+  songs.py           список песен, чарты, кэш информации о песнях
+  songs_screen.py    экран «ПЕСНИ»
+  settings.py        настройки и их хранение
+  settings_screen.py экран «НАСТРОЙКИ»
+  menu.py, results.py, records.py, intro.py, style.py, audio.py
+  fonts/, sounds/    ресурсы
+songs/               ваши песни (.ogg, .mp3, .wav); есть game.ogg
+images/              картинки для событий (.png, .jpg, .jpeg) — БЕТА
+data/                создаётся автоматически
+  charts/            чарты (*.json)
+  songinfo/          кэш длительности и огибающей песен
+  settings.json      настройки
+  records.json       рекорды
 ```
 
-Run the game's main file from the project root. On Windows, `py main.py` usually works; on Linux/macOS, use `python3 main.py`. If the entry-point filename differs in the current version, run the appropriate file.
+## Игра
 
-#### Windows (.exe) — coming soon
+- Дорожки по умолчанию: **D F J K** (меняются в «Настройках»).
+- **Обычная нота** — нажать в момент прихода к линии. Оценки: PERFECT, GREAT, GOOD, MISS.
+- **Удержание** — нажать в момент головы и держать до хвоста. Отпустить раньше времени — BREAK, комбо сбрасывается. Пока клавиша держится, начисляются очки за каждые 200 мс.
+- Перед стартом идёт отсчёт **3 · 2 · 1 · RYTHM!**, музыка начинается на RYTHM!.
+- Каждые 10 комбо — множитель очков (до ×4). HP: 5, каждый промах −1.
+- **ESC** или **P** — пауза. В паузе **M** — в меню.
 
-A standalone **Windows `.exe` build is in development**. Once it is ready, it will be available in this repository's **Releases** section. No ready-to-download `.exe` has been published yet; use the setup instructions above for now.
+## Редактор чартов
 
-### Music and charts
+Открывается из «ПЕСНИ»: выберите песню и чарт (или создайте новый).
 
-The game uses audio files and charts. Supported audio formats depend on the audio backend; the current implementation supports `.ogg`, `.mp3`, and `.wav`. Do not add music to the repository unless you have permission to distribute it. Use your own tracks or audio with a suitable license.
+- **Запись:** во время проигрывания (SPACE) нажимайте клавиши дорожек. Короткое нажатие (до 300 мс) — обычная нота, длинное — удержание.
+- **Правка:** левый клик ставит ноту (с привязкой к сетке, если песня не играет), правый клик удаляет. Del удаляет ближайшую ноту.
+- **Курсор:** ←/→ — шаг сетки, Shift+←/→ — секунда, колесо мыши — прокрутка, G — сетка (10–200 мс), ↑/↓ — масштаб.
+- **Длина удержания:** колёсико мыши над нотой (голова или тело удержания) меняет длину шагами по сетке, не меньше 50 мс. Колёсико вне нот по-прежнему двигает курсор.
+- **Сдвиг:** `[` и `]` — сдвиг всех нот на ±10 мс.
+- **Отмена:** Ctrl+Z (до 80 шагов). **Сохранить:** Ctrl+S. **Название:** F2.
+- **Авто-разметка:** ESC → «АВТО-РАЗМЕТКА». Заменяет все ноты черновиком.
 
-### Technology
+### Как работает авто-разметка
 
-- Python
-- Pygame
-- Audio analysis for chart generation
+1. Песня декодируется через pygame, ffmpeg не нужен.
+2. Спектр делится на четыре полосы (бас, низы, середина, верх). Каждая полоса отвечает за свою дорожку.
+3. В каждой полосе считается спектральный поток, нормируется медианой и MAD, ищутся локальные максимумы.
+4. Кандидаты отбираются от сильных к слабым с ограничением плотности (до 3 нот в секунду) и минимальными промежутками.
+5. Звуки, которые держатся дольше 600 мс и затухают не сразу, становятся удержаниями (до 2.5 с).
 
-### Inspiration and copyright
+## События песни
 
-Friday Night Funkin' was one source of inspiration for this rhythm game. The FNF name, characters, music, and other materials belong to their respective rights holders. Third-party assets used in this project must be distributed in accordance with their licenses.
+В редакторе: ESC → «СОБЫТИЯ». Список событий слева, поля выбранного справа.
 
-### Project status
+- **ГЛЮК** — экран рвётся на полосы. Настройки: длительность, сила (%).
+- **ВСПЫШКА** — белая вспышка. Настройки: скорость появления (attack), длительность.
+- **ФОН** — цвет фона с этого момента. R, G, B и время перехода (Переход, мс). Кнопка «ВЕРНУТЬ ИСХОДНЫЙ» (клавиша R) возвращает базовый цвет.
+- **ВИДЕО (БЕТА)** — ролик из папки `images/` (.mp4, .webm, .mov, .avi, .mkv). Ширина и высота задаются отдельно; кнопка «ПОДОГНАТЬ» (клавиша F) вписывает ролик в экран с сохранением пропорций. Длительность до 100 с. Плавность появления и исчезновения, анимация и смещение — как у картинки. Для показа роликов нужен `opencv-python` (`pip install opencv-python`), без него ролики не показываются.
+- **КАРТИНКА (БЕТА)** — картинка из папки `images/` на фоне под дорожками. Файл выбирается стрелками из списка файлов папки (проводника нет). Анимация: РЕЗКО (появилась и пропала), ПЛАВНО (появление и исчезновение за «Плавность»), ДВИЖЕНИЕ (плавно сдвигается на Движение X/Y). Ширина, смещение от центра.
 
-The project is under development. Gameplay mechanics and the interface may change as development continues.
+Окно событий делится на разделы: **ДОБАВИТЬ** (глюк, вспышка, картинка, фон), **ПРАВКА** (копировать, вставить, всем таким, дублировать, удалить), **ВИД** (просмотр, в курсор, назад). У каждого поля есть подсказка внизу.
 
----
+- **▶ ПРОСМОТР** (клавиша P) — проигрывает выбранное событие на весь экран по кругу, без запуска песни. Выход — P или ESC.
+- **Копирование свойств:** Ctrl+C копирует поля выбранного события (время не копируется), Ctrl+V вставляет их в выбранное событие того же типа, Ctrl+Shift+V — во все события этого типа, Ctrl+D — копия в позиции курсора.
 
-## Русский
+Клавиши: ↑↓ — событие, Tab — поле, ←/→ — значение (Shift ×5), 1/2/3/4/5 — добавить глюк/вспышку/картинку/фон/ролик у курсора, F — подогнать картинку или ролик по экрану, C — поставить время на курсор, R — вернуть исходный фон, Del — удалить, ESC — назад.
 
-**Geometry Rhythm** — это ритм-игра, в которой нужно попадать по нотам в такт музыке. Проект вдохновлён **Friday Night Funkin' (FNF)** и другими rhythm games, но использует собственную геометрическую подачу и механику.
+Эффекты в редакторе: клавиша **V** включает и выключает показ глюков, вспышек, картинок и фона прямо в редакторе, как их увидит игрок. Эффекты считаются по позиции курсора, поэтому работают и при игре (SPACE), и при остановке.
 
-> Это независимый фан-проект/учебный проект, вдохновлённый жанром. Он не является официальной частью Friday Night Funkin'.
+Числа в полях событий можно менять тремя способами: кликнуть по значению и ввести число (ENTER — применить, ESC — отмена), крутить колесо мыши над полем (Shift — ×5), или держать кнопки «+» и «−» — скорость растёт со временем.
 
-### Особенности
+Картинка, которой нет в `images/`, пропускается без ошибки.
 
-- Четыре дорожки и клавиши для попадания по нотам.
-- Оценка точности попаданий, комбо, очки и шкала здоровья.
-- Обычные ноты и удерживаемые ноты (hold notes).
-- Редактор чартов с сеткой времени, прокруткой, масштабированием и отменой действий.
-- Автоматическая генерация чарта на основе аудиоанализа.
-- Сохранение чартов и настроек.
+## Формат чарта (version 4)
 
-### Как играть
-
-1. Запусти игру и выбери доступную песню/чарт.
-2. Следи за нотами, которые движутся к линии попадания.
-3. Нажимай клавишу соответствующей дорожки, когда нота достигает линии.
-4. Для удерживаемой ноты зажми соответствующую клавишу и удерживай её до конца ноты.
-5. Старайся попадать как можно точнее: точность влияет на оценку, очки и комбо. Промахи могут уменьшать здоровье.
-
-#### Управление
-
-| Клавиша | Действие |
-| --- | --- |
-| `D` | Дорожка 1 |
-| `F` | Дорожка 2 |
-| `J` | Дорожка 3 |
-| `K` | Дорожка 4 |
-
-В меню и редакторе подсказки на экране могут уточнять дополнительные действия.
-
-### Редактор чартов
-
-Редактор позволяет создавать и менять расположение нот для песни. Используй временную сетку, прокрутку и масштабирование, чтобы точнее размещать события. Поддерживается отмена последних действий. Сохраняй чарт и затем проверяй его в игровом режиме.
-
-### Автоматическая генерация
-
-Автогенератор анализирует аудиосигнал и ищет выраженные изменения/удары, чтобы предложить расположение нот. Это отправная точка, а не гарантированно готовый чарт: результат зависит от жанра, микса и структуры композиции. После генерации рекомендуется вручную проверить тайминг и поправить ноты в редакторе.
-
-### Установка и запуск
-
-Для запуска нужен Python 3 и зависимости проекта. Клонируй репозиторий:
-
-```bash
-git clone https://github.com/Mistervock/geometry_rythm.git
-cd geometry_rythm
+```json
+{"version": 3, "song": "game.ogg", "name": "Чарт",
+ "notes": [{"t": 4000, "lane": 0}, {"t": 5000, "lane": 2, "d": 600}],
+ "events": [{"type": "flash", "t": 4200, "attack": 40, "dur": 500}]}
 ```
+Поле `events` есть только если в чарте есть события. Версия 3 (без событий) загружается.
 
-Установи зависимости, если в репозитории есть файл `requirements.txt`:
+`t` — время удара в мс, `lane` — 0..3, `d` — длительность удержания в мс (поля нет у обычных нот).
 
-```bash
-python -m pip install -r requirements.txt
-```
+## Настройки
 
-Затем запусти главный файл игры из корня проекта. На Windows обычно подходит `py main.py`, на Linux/macOS — `python3 main.py`. Если точка входа в текущей версии называется иначе, используй соответствующий файл запуска.
+Задержка звука (латентность), скорость нот, громкость музыки и эффектов, клавиши дорожек, сброс.
 
-#### Windows (.exe) — скоро
+Язык интерфейса: по умолчанию English, переключается пунктом «Language» (English / Русский). Тексты берутся из `core/i18n.py`: русский текст — ключ, английский — значение в словаре `EN`. Чтобы добавить строку, оберните её в `t("...")` и добавьте перевод в `EN`.
 
-Сборка Geometry Rhythm в отдельный исполняемый файл **`.exe` для Windows находится в разработке**. Когда сборка будет готова, её можно будет скачать из раздела **Releases** этого GitHub-репозитория. Пока готовый `.exe` ещё не опубликован; для запуска используй инструкции выше.
+## Производительность
 
-### Данные и музыка
-
-Игра работает с аудиофайлами и чартами. Поддерживаемые форматы аудио зависят от используемого backend; в текущей реализации предусмотрены `.ogg`, `.mp3` и `.wav`. Не добавляй в репозиторий музыку, если у тебя нет права распространять её. Используй собственные треки или аудио с подходящей лицензией.
-
-### Технологии
-
-- Python
-- Pygame
-- Аудиоанализ для генерации чартов
-
-### Вдохновение и авторские права
-
-Friday Night Funkin' послужила одним из источников вдохновения для идеи ритм-игры. Название, персонажи, музыка и другие материалы FNF принадлежат соответствующим правообладателям. Все сторонние ассеты, использованные в этом проекте, должны распространяться с соблюдением их лицензий.
-
-### Статус проекта
-
-Проект находится в разработке. Механики и интерфейс могут меняться по мере развития.
+`core/cache.py` строит спрайты нот (16 масштабов на дорожку), кольца попаданий и подписи один раз при запуске (`python core/cache.py` выводит время прогрева). Во время игры новые поверхности для нот, колец и оценок не создаются, прозрачность задаётся через `set_alpha`.
