@@ -8,8 +8,9 @@ import config as C
 import editor
 import songs
 import style as S
+from i18n import t
 
-ROW_SONGS = 44
+ROW_SONGS = 50
 VISIBLE_SONGS = 7
 ROW_CHARTS = 40
 VISIBLE_CHARTS = 8
@@ -39,18 +40,18 @@ def songs_screen(clock):
     toast, toast_left = "", 0.0
     frame = 0
 
-    back_btn = S.Btn((C.WIDTH // 2 - 70, 528, 140, 40), "НАЗАД", C.PURPLE_LIGHT, S.font(16, True))
+    back_btn = S.Btn((C.WIDTH // 2 - 70, 528, 140, 40), t("НАЗАД"), C.PURPLE_LIGHT, S.font(16, True))
     chart_btns = [
-        ("play", S.Btn((80, 470, 150, 42), "ИГРАТЬ", C.GREEN, S.font(16, True))),
-        ("edit", S.Btn((240, 470, 150, 42), "РЕДАКТ.", C.CYAN, S.font(16, True))),
-        ("new", S.Btn((400, 470, 150, 42), "НОВЫЙ", C.GOLD, S.font(16, True))),
-        ("del", S.Btn((560, 470, 150, 42), "УДАЛИТЬ", C.RED_LIGHT, S.font(16, True))),
+        ("play", S.Btn((80, 470, 150, 42), t("ИГРАТЬ"), C.GREEN, S.font(16, True))),
+        ("edit", S.Btn((240, 470, 150, 42), t("РЕДАКТ."), C.CYAN, S.font(16, True))),
+        ("new", S.Btn((400, 470, 150, 42), t("НОВЫЙ"), C.GOLD, S.font(16, True))),
+        ("del", S.Btn((560, 470, 150, 42), t("УДАЛИТЬ"), C.RED_LIGHT, S.font(16, True))),
     ]
 
     def open_song(idx):
         nonlocal view, song, song_dur, charts, sel_chart, top_chart, confirm_del
         song = names[idx]
-        _loading(pygame.display.get_surface(), "ЗАГРУЗКА ПЕСНИ")
+        _loading(pygame.display.get_surface(), t("ЗАГРУЗКА ПЕСНИ"))
         song_dur = songs.info(song).get("duration_ms", 0)
         charts = songs.charts_for(song)
         sel_chart = 0
@@ -85,12 +86,12 @@ def songs_screen(clock):
         if action == "del" and charts:
             if not confirm_del:
                 confirm_del = True
-                toast, toast_left = "Нажмите ещё раз, чтобы удалить чарт", 3.0
+                toast, toast_left = t("Нажмите ещё раз, чтобы удалить чарт"), 3.0
             else:
                 songs.delete_chart(charts[sel_chart])
                 confirm_del = False
                 reload_charts()
-                toast, toast_left = "Чарт удалён", 2.0
+                toast, toast_left = t("Чарт удалён"), 2.0
         return None
 
     while True:
@@ -211,7 +212,7 @@ def _draw_list(names, counts, sel, top, back_btn, mouse, frame):
     scr = pygame.display.get_surface()
     scr.fill((0, 0, 0))
     S.draw_grid(scr, frame * 0.3, 0.0)
-    S.glitch_title(scr, S.font(36, True), "ПЕСНИ", C.GOLD, C.WIDTH // 2, 60, frame)
+    S.glitch_title(scr, S.font(36, True), t("ПЕСНИ"), C.GOLD, C.WIDTH // 2, 60, frame)
     area = pygame.Rect(120, 100, C.WIDTH - 240, VISIBLE_SONGS * ROW_SONGS + 20)
     S.panel(scr, area, C.GOLD, alpha=215)
     for i in range(VISIBLE_SONGS):
@@ -226,10 +227,10 @@ def _draw_list(names, counts, sel, top, back_btn, mouse, frame):
             pygame.draw.rect(scr, C.CYAN, row, 2, border_radius=6)
         count = counts.get(names[idx], 0)
         col = C.WHITE if active else (190, 190, 210)
-        scr.blit(S.font(18, True).render(songs.title(names[idx]), True, col), (row.x + 14, row.y + 6))
-        sub = f"чартов: {count}"
-        scr.blit(S.font(14).render(sub, True, C.GREY), (row.x + 14, row.y + 24))
-    S.blit_text(scr, S.font(14), "Песни — файлы .ogg/.mp3/.wav в папке songs/", C.GREY,
+        scr.blit(S.font(18, True).render(songs.title(names[idx]), True, col), (row.x + 14, row.y + 4))
+        sub = f"{t('чартов')}: {count}"
+        scr.blit(S.font(14).render(sub, True, C.GREY), (row.x + 14, row.y + 26))
+    S.blit_text(scr, S.font(14), t("Песни — файлы .ogg/.mp3/.wav в папке songs/"), C.GREY,
                 C.WIDTH // 2, 500)
     back_btn.draw(scr, mouse)
     S.post_fx(scr, frame, grain=40)
@@ -243,7 +244,7 @@ def _draw_charts(song, dur, charts, sel, top, chart_btns, back_btn, mouse, frame
     area = pygame.Rect(90, 96, C.WIDTH - 180, VISIBLE_CHARTS * ROW_CHARTS + 20)
     S.panel(scr, area, C.CYAN, alpha=215)
     if not charts:
-        S.blit_text(scr, S.font(18), "чартов пока нет — нажмите НОВЫЙ", C.GREY,
+        S.blit_text(scr, S.font(18), t("чартов пока нет — нажмите НОВЫЙ"), C.GREY,
                     C.WIDTH // 2, area.centery)
     for i in range(VISIBLE_CHARTS):
         idx = top + i
@@ -259,7 +260,7 @@ def _draw_charts(song, dur, charts, sel, top, chart_btns, back_btn, mouse, frame
         col = C.WHITE if active else (190, 190, 210)
         scr.blit(S.font(16, True).render(ch.name, True, col), (row.x + 14, row.y + 9))
         density = len(ch.notes) / max(1, dur / 1000.0)
-        sub = f"нот: {len(ch.notes)}   плотность: {density:.2f}/с"
+        sub = f"{t('нот')}: {len(ch.notes)}   {t('плотность')}: {density:.2f}/{t('с')}"
         scr.blit(S.font(14).render(sub, True, C.GREY), (row.x + 260, row.y + 11))
     for action, btn in chart_btns:
         btn.draw(scr, mouse, active=False)
@@ -270,7 +271,7 @@ def _draw_charts(song, dur, charts, sel, top, chart_btns, back_btn, mouse, frame
 
 
 def _empty_screen(clock):
-    back = S.Btn((C.WIDTH // 2 - 70, 380, 140, 40), "НАЗАД", C.PURPLE_LIGHT, S.font(16, True))
+    back = S.Btn((C.WIDTH // 2 - 70, 380, 140, 40), t("НАЗАД"), C.PURPLE_LIGHT, S.font(16, True))
     frame = 0
     while True:
         clock.tick(C.FPS)
@@ -286,8 +287,8 @@ def _empty_screen(clock):
                 return None
         scr = pygame.display.get_surface()
         scr.fill((0, 0, 0))
-        S.glitch_title(scr, S.font(30, True), "ПЕСНИ", C.GOLD, C.WIDTH // 2, 200, frame)
-        S.blit_text(scr, S.font(18), "Положите .ogg / .mp3 / .wav в папку songs/", C.GREY,
+        S.glitch_title(scr, S.font(30, True), t("ПЕСНИ"), C.GOLD, C.WIDTH // 2, 200, frame)
+        S.blit_text(scr, S.font(18), t("Положите .ogg / .mp3 / .wav в папку songs/"), C.GREY,
                     C.WIDTH // 2, 260)
         back.draw(scr, mouse)
         S.post_fx(scr, frame, grain=40)

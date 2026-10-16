@@ -15,6 +15,7 @@ DEFAULTS = {
     "music_volume": 75,
     "sfx_volume": 60,
     "lane_keys": ["d", "f", "j", "k"],
+    "lang": "en",
 }
 
 LIMITS = {
@@ -54,6 +55,8 @@ def _sanitize():
     keys = d.get("lane_keys")
     if not (isinstance(keys, list) and len(keys) == 4 and all(isinstance(k, str) and k for k in keys)):
         d["lane_keys"] = list(DEFAULTS["lane_keys"])
+    if d.get("lang") not in ("en", "ru"):
+        d["lang"] = "en"
 
 
 def get(key):

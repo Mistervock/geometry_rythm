@@ -15,6 +15,7 @@ import settings
 import songs
 import style as S
 from chart import Note
+from i18n import t
 
 SNAPS = (10, 25, 50, 100, 200)
 ZOOMS = (0.25, 0.35, 0.5, 0.7, 1.0)
@@ -60,6 +61,9 @@ class Editor:
         self.menu_sel = 0
         self.frame = 0
         self.veil = pygame.Surface((C.WIDTH, C.HEIGHT), pygame.SRCALPHA)
+        self.white = pygame.Surface((C.WIDTH, C.HEIGHT))
+        self.white.fill(C.WHITE)
+        self.fx_on = True
         self.veil.fill((0, 0, 0, 185))
         self._build_menu()
 
@@ -158,44 +162,44 @@ class Editor:
         songs.save_chart(self.chart)
         self.dirty = False
         self.confirm_exit = False
-        self._toast("Сохранено")
+        self._toast(t("Сохранено"))
 
     def _auto(self):
         if not autochart.AVAILABLE:
-            self._toast("Авто-разметка недоступна: установите numpy")
+            self._toast(t("Авто-разметка недоступна: установите numpy"))
             return
-        self._toast("Анализ песни…", 60)
+        self._toast(t("Анализ песни…"), 60)
         self._draw((0, 0))
         pygame.display.flip()
         res = autochart.build(self.song_path)
         if res is None:
-            self._toast("Не удалось проанализировать песню")
+            self._toast(t("Не удалось проанализировать песню"))
             return
         self._push_undo()
         self._set_notes(res["notes"])
-        self._toast(f"Авто-разметка: нот {len(res['notes'])}")
+        self._toast(f"{t('Авто-разметка')}: {t('нот')} {len(res['notes'])}")
 
     def _shift(self, ms):
         self._push_undo()
         for n in self.chart.notes:
             n.t = max(0, n.t + ms)
         self.chart.sort()
-        self._toast(f"Сдвиг всех нот: {ms:+d} мс")
+        self._toast(f"{t('Сдвиг всех нот')}: {ms:+d} {t('мс')}")
 
     def _undo(self):
         if not self.undo:
-            self._toast("Нечего отменять")
+            self._toast(t("Нечего отменять"))
             return
         self._set_notes(self.undo.pop())
-        self._toast("Отмена")
+        self._toast(t("Отмена"))
 
     #-- Меню
 
     def _build_menu(self):
-        labels = [("continue", "ПРОДОЛЖИТЬ"), ("save", "СОХРАНИТЬ"),
-                  ("save_exit", "СОХРАНИТЬ И ВЫЙТИ"), ("events", "СОБЫТИЯ (ГЛЮК, ВСПЫШКА, КАРТИНКИ)"),
-                  ("auto", "АВТО-РАЗМЕТКА (ЗАМЕНИТ НОТЫ)"),
-                  ("exit", "ВЫЙТИ БЕЗ СОХРАНЕНИЯ")]
+        labels = [("continue", t("ПРОДОЛЖИТЬ")), ("save", t("СОХРАНИТЬ")),
+                  ("save_exit", t("СОХРАНИТЬ И ВЫЙТИ")), ("events", t("СОБЫТИЯ (ГЛЮК, ВСПЫШКА, КАРТИНКИ)")),
+                  ("auto", t("АВТО-РАЗМЕТКА (ЗАМЕНИТ НОТЫ)")),
+                  ("exit", t("ВЫЙТИ БЕЗ СОХРАНЕНИЯ"))]
         self.menu_items = labels
         self.menu_btns = [S.Btn((C.WIDTH // 2 - 170, 176 + i * 52, 340, 42), text, C.CYAN,
                                 S.font(16, True)) for i, (_, text) in enumerate(labels)]
@@ -218,7 +222,7 @@ class Editor:
         elif action == "exit":
             if self.dirty and not self.confirm_exit:
                 self.confirm_exit = True
-                self._toast("Есть несохранённые изменения. Нажмите ещё раз, чтобы выйти.", 4)
+                self._toast(t("Есть несохранённые изменения. Нажмите ещё раз, чтобы выйти."), 4)
             else:
                 return "back"
         return None
@@ -310,7 +314,7 @@ class Editor:
             if new < REC_HOLD_MS:
                 new = 0
         n.dur = int(max(0, min(MAX_HOLD, new)))
-        self._toast(f"Удержание: {n.dur} мс" if n.dur else "Обычная нота", 1.0)
+        self._toast(f"{t('Удержание')}: {n.dur} {t('мс')}" if n.dur else t("Обычная нота"), 1.0)
         return True
 
     def _key(self, ev):
@@ -362,9 +366,12 @@ class Editor:
             self.zoom_i = min(len(ZOOMS) - 1, self.zoom_i + 1)
         elif k == pygame.K_DOWN:
             self.zoom_i = max(0, self.zoom_i - 1)
+        elif k == pygame.K_v:
+            self.fx_on = not self.fx_on
+            self._toast(t("Эффекты событий в редакторе: ") + (t("ВКЛ") if self.fx_on else t("ВЫКЛ")))
         elif k == pygame.K_g:
             self.snap_i = (self.snap_i + 1) % len(SNAPS)
-            self._toast(f"Сетка: {self.snap} мс")
+            self._toast(f"{t('Сетка')}: {self.snap} {t('мс')}")
         elif k == pygame.K_LEFTBRACKET:
             self._shift(-10)
         elif k == pygame.K_RIGHTBRACKET:
@@ -377,7 +384,7 @@ class Editor:
             n = self.nearest(ref, limit=200)
             if n is not None:
                 self.delete_note(n)
-                self._toast("Нота удалена")
+                self._toast(t("Нота удалена"))
         elif k in self.keys:
             lane = self.keys.index(k)
             if self.playing:
@@ -403,7 +410,7 @@ class Editor:
             n = self.nearest(t, lane=lane, limit=max(120, 2 * self.snap))
             if n is not None:
                 self.delete_note(n)
-                self._toast("Нота удалена")
+                self._toast(t("Нота удалена"))
         return None
 
     #-- Отрисовка
@@ -415,6 +422,9 @@ class Editor:
         scr = pygame.display.get_surface()
         scr.fill(events.bg_at(self.chart.events, self.cursor))
         S.draw_grid(scr, (self.cursor * 0.04) % 60, 0.0)
+        glitch_lvl, flash_lvl, images = events.active_fx(self.chart.events, self.cursor) \
+            if self.fx_on else (0.0, 0.0, [])
+        events.draw_images(scr, images)
 
         for i in range(4):
             x = C.FIELD_X + i * (C.LANE_W + C.LANE_GAP)
@@ -462,21 +472,27 @@ class Editor:
             alpha = 255 * min(1.0, self.toast_left / 0.6)
             S.blit_text(scr, S.font(16, True), self.toast_text, C.GOLD, C.WIDTH // 2, 78, alpha)
 
+        if glitch_lvl > 0:
+            S.glitch(scr, strength=glitch_lvl)
+        if flash_lvl > 0:
+            self.white.set_alpha(int(255 * 0.85 * flash_lvl))
+            scr.blit(self.white, (0, 0))
+
         if self.name_edit:
             box = pygame.Rect(C.WIDTH // 2 - 170, 300, 340, 56)
             S.panel(scr, box, C.CYAN, alpha=230)
-            S.blit_text(scr, S.font(14, True), "НАЗВАНИЕ ЧАРТА — ENTER", C.CYAN, C.WIDTH // 2, 290)
+            S.blit_text(scr, S.font(14, True), t("НАЗВАНИЕ ЧАРТА — ENTER"), C.CYAN, C.WIDTH // 2, 290)
             shown = self.name_buf + ("|" if (self.frame // 30) % 2 == 0 else " ")
             S.blit_text(scr, S.font(20, True), shown, C.WHITE, C.WIDTH // 2, 328)
 
         if self.menu_open:
             scr.blit(self.veil, (0, 0))
-            S.glitch_title(scr, S.font(36, True), "РЕДАКТОР", C.CYAN, C.WIDTH // 2, 110, 60)
+            S.glitch_title(scr, S.font(36, True), t("РЕДАКТОР"), C.CYAN, C.WIDTH // 2, 110, 60)
             for i, btn in enumerate(self.menu_btns):
                 disabled = self.menu_items[i][0] == "auto" and not autochart.AVAILABLE
                 btn.color = C.DIM if disabled else C.CYAN
                 btn.draw(scr, mouse, active=(i == self.menu_sel))
-            S.blit_text(scr, S.font(14), "ESC — закрыть меню", C.GREY, C.WIDTH // 2, 500)
+            S.blit_text(scr, S.font(14), t("ESC — закрыть меню"), C.GREY, C.WIDTH // 2, 500)
 
         S.post_fx(scr, self.frame, grain=20)
 
@@ -508,7 +524,7 @@ class Editor:
                 pts = [(x, y - 8), (x + 8, y), (x, y + 8), (x - 8, y)]
                 pygame.draw.polygon(scr, grey, pts)
                 pygame.draw.polygon(scr, edge, pts, 1)
-                label = cache.text(12, True, events.TYPE_NAMES[ev["type"]], grey)
+                label = cache.text(12, True, t(events.TYPE_NAMES[ev["type"]]), grey)
                 scr.blit(label, (x + 14, y - label.get_height() // 2))
 
     def _draw_overview(self, scr):
@@ -529,10 +545,10 @@ class Editor:
         scr.blit(S.font(16, True).render(left, True, C.WHITE), (14, 16))
         name = f"{songs.title(self.chart.song)} — {self.chart.name}" + ("  *" if self.dirty else "")
         scr.blit(S.font(14).render(name, True, C.GREY), (14, 40))
-        info = f"нот: {len(self.chart.notes)}   сетка: {self.snap} мс   масштаб: {self.zoom:.2f}"
-        t = S.font(14).render(info, True, C.GREY)
-        scr.blit(t, (C.WIDTH - t.get_width() - 14, 16))
-        hint = "SPACE играть · ←→ курсор · G сетка · [ ] сдвиг · Del удалить · Ctrl+S сохранить · ESC меню"
+        info = f"{t('нот')}: {len(self.chart.notes)}   {t('сетка')}: {self.snap} {t('мс')}   {t('масштаб')}: {self.zoom:.2f}   V {t('эффекты')}: {t('ВКЛ') if self.fx_on else t('ВЫКЛ')}"
+        info_surf = S.font(14).render(info, True, C.GREY)
+        scr.blit(info_surf, (C.WIDTH - info_surf.get_width() - 14, 16))
+        hint = t("SPACE играть · ←→ курсор · G сетка · [ ] сдвиг · Del удалить · Ctrl+S сохранить · ESC меню")
         h = S.font(14).render(hint, True, (110, 110, 150))
         scr.blit(h, (C.WIDTH // 2 - h.get_width() // 2, C.HEIGHT - 22))
 

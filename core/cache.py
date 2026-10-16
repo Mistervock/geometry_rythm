@@ -7,6 +7,7 @@ import pygame
 
 import config as C
 import style as S
+from i18n import t
 
 NOTE_SCALES = [round(1.0 + 0.05 * i, 2) for i in range(16)]
 RING_RADII = list(range(18, 120, 2))
@@ -70,7 +71,7 @@ def warm():
         col = C.GOLD if name == "RYTHM!" else C.CYAN
         _texts[(COUNTDOWN_SIZE, True, name, col)] = _bake_text(COUNTDOWN_SIZE, True, name, col)
         _texts[(COUNTDOWN_SIZE, True, name, C.CYAN)] = _bake_text(COUNTDOWN_SIZE, True, name, C.CYAN)
-    _texts[(14, False, "ESC — пауза", (90, 90, 120))] = _bake_text(14, False, "ESC — пауза", (90, 90, 120))
+    _texts[(14, False, t("ESC — пауза"), (90, 90, 120))] = _bake_text(14, False, t("ESC — пауза"), (90, 90, 120))
     _warmed = True
     return (time.perf_counter() - t0) * 1000.0
 

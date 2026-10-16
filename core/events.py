@@ -5,15 +5,17 @@ import os
 import pygame
 
 import config as C
+import video
 
-TYPES = ("glitch", "flash", "image", "bg")
-TYPE_NAMES = {"glitch": "ГЛЮК", "flash": "ВСПЫШКА", "image": "КАРТИНКА (БЕТА)", "bg": "ФОН"}
-TYPE_COLORS = {"glitch": C.RED_LIGHT, "flash": C.WHITE, "image": C.GOLD, "bg": (200, 200, 210)}
+TYPES = ("glitch", "flash", "image", "bg", "video")
+TYPE_NAMES = {"glitch": "ГЛЮК", "flash": "ВСПЫШКА", "image": "КАРТИНКА (БЕТА)", "bg": "ФОН", "video": "ВИДЕО (БЕТА)"}
+TYPE_COLORS = {"glitch": C.RED_LIGHT, "flash": C.WHITE, "image": C.GOLD, "bg": (200, 200, 210), "video": (120, 200, 255)}
 BASE_BG = tuple(C.BG_DARK)
 ANIMS = ("pop", "fade", "drift")
 ANIM_NAMES = {"pop": "РЕЗКО", "fade": "ПЛАВНО", "drift": "ДВИЖЕНИЕ"}
 IMAGE_DIR = C.root("images")
 IMAGE_EXT = (".png", ".jpg", ".jpeg")
+VIDEO_EXT = (".mp4", ".webm", ".mov", ".avi", ".mkv", ".m4v")
 MAX_T = 60 * 60 * 1000
 
 FIELDS = {
@@ -21,6 +23,14 @@ FIELDS = {
                ("strength", "Сила, %", 10, 100, 5, 60)),
     "flash": (("attack", "Скорость появления, мс", 10, 500, 10, 40),
               ("dur", "Длительность, мс", 50, 3000, 50, 500)),
+    "video": (("dur", "Длительность, мс", 200, 100000, 100, 3000),
+              ("w", "Ширина, px", 80, 1280, 20, 480),
+              ("h", "Высота, px", 45, 720, 20, 270),
+              ("x", "Смещение X, px", -600, 600, 10, 0),
+              ("y", "Смещение Y, px", -400, 400, 10, 0),
+              ("fade", "Плавность, мс", 50, 2000, 50, 300),
+              ("dx", "Движение X, px", -600, 600, 10, 0),
+              ("dy", "Движение Y, px", -400, 400, 10, 0)),
     "image": (("dur", "Длительность, мс", 200, 20000, 100, 3000),
               ("w", "Ширина, px", 80, 1280, 20, 480),
               ("x", "Смещение X, px", -600, 600, 10, 0),
@@ -35,20 +45,25 @@ FIELDS = {
 }
 
 
-def list_images():
+def list_media(kind):
+    exts = VIDEO_EXT if kind == "video" else IMAGE_EXT
     try:
         os.makedirs(IMAGE_DIR, exist_ok=True)
-        names = [f for f in os.listdir(IMAGE_DIR) if f.lower().endswith(IMAGE_EXT)]
+        names = [f for f in os.listdir(IMAGE_DIR) if f.lower().endswith(exts)]
     except OSError:
         return []
     return sorted(names, key=str.lower)
+
+
+def list_images():
+    return list_media("image")
 
 
 def _defaults(kind):
     ev = {"type": kind, "t": 0}
     for key, _, _, _, _, default in FIELDS[kind]:
         ev[key] = default
-    if kind == "image":
+    if kind in ("image", "video"):
         ev["file"] = ""
         ev["anim"] = "fade"
     if kind == "bg":
@@ -59,8 +74,8 @@ def _defaults(kind):
 def make(kind, t):
     ev = _defaults(kind)
     ev["t"] = max(0, min(MAX_T, int(t)))
-    if kind == "image":
-        names = list_images()
+    if kind in ("image", "video"):
+        names = list_media(kind)
         ev["file"] = names[0] if names else ""
     return ev
 
@@ -81,7 +96,7 @@ def normalize(raw):
     ev["t"] = _num(raw.get("t"), 0, MAX_T, 0)
     for key, _, lo, hi, _, default in FIELDS[kind]:
         ev[key] = _num(raw.get(key), lo, hi, default)
-    if kind == "image":
+    if kind in ("image", "video"):
         ev["file"] = str(raw.get("file", ""))[:120]
         ev["anim"] = raw.get("anim") if raw.get("anim") in ANIMS else "fade"
     if kind == "bg":
@@ -188,3 +203,67 @@ def image_state(ev, elapsed):
         p = p * p * (3 - 2 * p)
         return alpha, ev["x"] + ev["dx"] * p, ev["y"] + ev["dy"] * p
     return alpha, ev["x"], ev["y"]
+
+
+#-- Эффекты по времени (для редактора: считаются из позиции курсора)
+
+def active_fx(events_list, now):
+    glitch, flash, images = 0.0, 0.0, []
+    for ev in events_list:
+        if ev["type"] == "bg":
+            continue
+        elapsed = now - ev["t"]
+        if elapsed < 0 or elapsed >= total_ms(ev):
+            continue
+        if ev["type"] == "glitch":
+            glitch = max(glitch, glitch_level(ev, elapsed))
+        elif ev["type"] == "flash":
+            flash = max(flash, flash_alpha(ev, elapsed))
+        elif ev["type"] in ("image", "video"):
+            images.append((ev, elapsed))
+    return glitch, flash, images
+
+
+def draw_media(surface, ev, elapsed):
+    alpha, ox, oy = image_state(ev, elapsed)
+    if alpha <= 0 or not ev.get("file"):
+        return
+    if ev["type"] == "video":
+        path = os.path.join(IMAGE_DIR, ev["file"])
+        img = video.frame(path, (path, ev["t"]), elapsed, ev["w"], ev["h"])
+    else:
+        img = image_surface(ev["file"], ev["w"])
+    if img is None:
+        return
+    img.set_alpha(int(255 * alpha))
+    surface.blit(img, (C.WIDTH // 2 + ox - img.get_width() // 2,
+                       C.HEIGHT // 2 + oy - img.get_height() // 2))
+
+
+def draw_images(surface, images):
+    for ev, elapsed in images:
+        draw_media(surface, ev, elapsed)
+
+
+_natural = {}
+
+
+def natural_size(ev):
+    if not ev.get("file"):
+        return None
+    path = os.path.join(IMAGE_DIR, ev["file"])
+    if ev["type"] == "video":
+        return video.size(path)
+    if path not in _natural:
+        try:
+            _natural[path] = pygame.image.load(path).get_size()
+        except (pygame.error, OSError):
+            _natural[path] = None
+    return _natural[path]
+
+
+def fit_box(nw, nh, box_w, box_h):
+    scale = min(box_w / nw, box_h / nh)
+    w = max(FIELDS["video"][1][2], min(FIELDS["video"][1][3], round(nw * scale)))
+    h = max(FIELDS["video"][2][2], min(FIELDS["video"][2][3], round(nh * scale)))
+    return w, h

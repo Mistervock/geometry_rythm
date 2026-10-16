@@ -2535,10 +2535,73 @@
    "orig": true
   },
   {
+   "type": "glitch",
+   "t": 84547,
+   "dur": 1000,
+   "strength": 80
+  },
+  {
+   "type": "glitch",
+   "t": 92249,
+   "dur": 1000,
+   "strength": 100
+  },
+  {
+   "type": "video",
+   "t": 94160,
+   "dur": 56900,
+   "w": 800,
+   "h": 450,
+   "x": 0,
+   "y": 0,
+   "fade": 300,
+   "dx": 0,
+   "dy": 0,
+   "file": "Official_TetoClip.mp4",
+   "anim": "fade"
+  },
+  {
    "type": "flash",
    "t": 94178,
    "attack": 40,
    "dur": 500
+  },
+  {
+   "type": "flash",
+   "t": 96219,
+   "attack": 40,
+   "dur": 500
+  },
+  {
+   "type": "flash",
+   "t": 98027,
+   "attack": 40,
+   "dur": 500
+  },
+  {
+   "type": "flash",
+   "t": 102045,
+   "attack": 40,
+   "dur": 500
+  },
+  {
+   "type": "glitch",
+   "t": 105615,
+   "dur": 900,
+   "strength": 100
+  },
+  {
+   "type": "image",
+   "t": 105615,
+   "dur": 3000,
+   "w": 480,
+   "x": 0,
+   "y": 0,
+   "fade": 300,
+   "dx": 0,
+   "dy": 0,
+   "file": "",
+   "anim": "fade"
   }
  ]
 }

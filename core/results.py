@@ -8,6 +8,7 @@ import audio
 import config as C
 import records
 import style as S
+from i18n import t
 
 ROW_H = 26
 
@@ -25,8 +26,8 @@ def results_screen(clock, res):
     blink = 0
     n = 0
 
-    again_btn = S.Btn((C.WIDTH // 2 - 270, 512, 260, 44), "ЕЩЁ РАЗ", C.CYAN, S.font(18, True))
-    menu_btn = S.Btn((C.WIDTH // 2 + 10, 512, 260, 44), "В МЕНЮ", C.PURPLE_LIGHT, S.font(18, True))
+    again_btn = S.Btn((C.WIDTH // 2 - 270, 512, 260, 44), t("ЕЩЁ РАЗ"), C.CYAN, S.font(18, True))
+    menu_btn = S.Btn((C.WIDTH // 2 + 10, 512, 260, 44), t("В МЕНЮ"), C.PURPLE_LIGHT, S.font(18, True))
     if failed:
         audio.play("split", 0.5)
     else:
@@ -70,7 +71,7 @@ def results_screen(clock, res):
 
         k = n - 10
         if k >= 0:
-            title = "ПРОВАЛ" if failed else "ФИНИШ"
+            title = t("ПРОВАЛ") if failed else t("ФИНИШ")
             col = C.RED_LIGHT if failed else C.GOLD
             S.glitch_title(scr, S.font(44, True), title, col, C.WIDTH // 2, 92, k)
 
@@ -78,14 +79,14 @@ def results_screen(clock, res):
             S.blit_text(scr, S.font(14), f"{res['song']} — {res.get('chart', '')}", C.GREY,
                         C.WIDTH // 2, 124, 255 * S.smoothstep((n - 20) / 30))
         if n >= 30:
-            S.blit_text(scr, S.font(22, True), f"ОЧКИ  {score:06d}", C.GOLD,
+            S.blit_text(scr, S.font(22, True), f"{t('ОЧКИ')}  {score:06d}", C.GOLD,
                         C.WIDTH // 2, 150, S.smoothstep((n - 30) / 30) * 255)
 
         if n >= 60:
             g_col = C.RED_LIGHT if grade == "F" else C.CYAN
             S.blit_text(scr, S.font(52, True), grade, g_col, C.WIDTH // 2 - 90, 232,
                         255 * S.smoothstep((n - 60) / 30))
-            S.blit_text(scr, S.font(18), f"ТОЧНОСТЬ {res['acc']:.1f}%", C.WHITE,
+            S.blit_text(scr, S.font(18), f"{t('ТОЧНОСТЬ')} {res['acc']:.1f}%", C.WHITE,
                         C.WIDTH // 2 + 60, 226, 255 * S.smoothstep((n - 60) / 30))
             S.blit_text(scr, S.font(14), f"MAX COMBO {res['max_combo']}", C.GREY,
                         C.WIDTH // 2 + 60, 252, 255 * S.smoothstep((n - 70) / 30))
@@ -99,11 +100,11 @@ def results_screen(clock, res):
         if n >= 130 and can_record and saved is None:
             box = pygame.Rect(C.WIDTH // 2 - 170, 340, 340, 48)
             S.panel(scr, box, C.GOLD, alpha=220)
-            S.blit_text(scr, S.font(14, True), "ВВЕДИТЕ ИМЯ ДЛЯ РЕКОРДОВ", C.GOLD,
+            S.blit_text(scr, S.font(14, True), t("ВВЕДИТЕ ИМЯ ДЛЯ РЕКОРДОВ"), C.GOLD,
                         C.WIDTH // 2, 326)
             shown = name + ("|" if blink < 30 else " ")
             S.blit_text(scr, S.font(22, True), shown, C.WHITE, C.WIDTH // 2, 364)
-            S.blit_text(scr, S.font(14), "ENTER — сохранить, ESC — не сохранять", C.GREY,
+            S.blit_text(scr, S.font(14), t("ENTER — сохранить, ESC — не сохранять"), C.GREY,
                         C.WIDTH // 2, 404)
 
         if n >= 130 and (saved is not None or not can_record):
@@ -113,7 +114,7 @@ def results_screen(clock, res):
             px, py, pw = C.WIDTH // 2 - 200, 330, 400
             ph = 36 + max(1, len(rows)) * ROW_H
             S.panel(scr, pygame.Rect(px, py, pw, ph), C.GOLD, alpha=200)
-            S.blit_text(scr, S.font(14, True), "ТАБЛИЦА РЕКОРДОВ", C.GOLD,
+            S.blit_text(scr, S.font(14, True), t("ТАБЛИЦА РЕКОРДОВ"), C.GOLD,
                         C.WIDTH // 2, py + 16)
             for idx, e in enumerate(rows):
                 ka = n - (130 + idx * 8)
@@ -130,14 +131,14 @@ def results_screen(clock, res):
                 surf.set_alpha(int(alpha))
                 scr.blit(surf, (px + 16, py + 32 + idx * ROW_H))
             if not rows:
-                S.blit_text(scr, S.font(14), "пока пусто", C.GREY, C.WIDTH // 2, py + 50)
+                S.blit_text(scr, S.font(14), t("пока пусто"), C.GREY, C.WIDTH // 2, py + 50)
 
         if n >= 150:
             ready_btns = saved is not None or not can_record
             if ready_btns:
                 again_btn.draw(scr, mouse)
                 menu_btn.draw(scr, mouse)
-            S.blit_text(scr, S.font(14), "SPACE — ещё раз, M — в меню", (255, 210, 60),
+            S.blit_text(scr, S.font(14), t("SPACE — ещё раз, M — в меню"), (255, 210, 60),
                         C.WIDTH // 2, 580)
 
         S.post_fx(scr, n, grain=50)

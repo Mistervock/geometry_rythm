@@ -8,6 +8,7 @@ import pygame
 import config as C
 
 _fonts = {}
+_meta = {}
 _scan = None
 _band = None
 
@@ -20,7 +21,20 @@ def font(size, bold=False):
             _fonts[key] = pygame.font.Font(C.res("fonts", name), size)
         except Exception:
             _fonts[key] = pygame.font.Font(None, size + 6)
+        _meta[id(_fonts[key])] = key
     return _fonts[key]
+
+
+def fit(fnt, text, max_w):
+    if fnt.size(text)[0] <= max_w:
+        return fnt
+    size, bold = _meta.get(id(fnt), (18, False))
+    while size > 8:
+        size -= 1
+        f = font(size, bold)
+        if f.size(text)[0] <= max_w:
+            return f
+    return font(size, bold)
 
 
 def clamp(x, a=0.0, b=1.0):
@@ -132,7 +146,7 @@ class Btn:
         self.rect = pygame.Rect(rect)
         self.label = label
         self.color = color
-        self.fnt = fnt or font(18)
+        self.fnt = fit(fnt or font(18), label, self.rect.w - 16)
 
     def hovered(self, mouse):
         return self.rect.collidepoint(mouse)

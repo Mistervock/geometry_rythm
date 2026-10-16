@@ -9,6 +9,7 @@ import pygame
 import audio
 import config as C
 import style as S
+from i18n import t
 
 DEVELOPER = "Mistervock"
 BETA = "Devorer"
@@ -123,11 +124,11 @@ def _credit_frame(n, fade_out_start):
     kp = n - PROMPT_START
     if kp >= 0:
         pulse = 0.6 + 0.4 * (0.5 + 0.5 * math.sin(kp * 0.12))
-        _alpha_text(S.font(18), "Нажми ПРОБЕЛ, чтобы продолжить", C.GOLD,
+        _alpha_text(S.font(18), t("Нажми ПРОБЕЛ, чтобы продолжить"), C.GOLD,
                     C.WIDTH // 2, C.HEIGHT - 110, 255 * pulse)
 
     if n >= FADE_IN_END:
-        _alpha_text(S.font(14), "ESC — пропустить", (120, 120, 150), C.WIDTH // 2, C.HEIGHT - 40, 170)
+        _alpha_text(S.font(14), t("ESC — пропустить"), (120, 120, 150), C.WIDTH // 2, C.HEIGHT - 40, 170)
 
     _scanline_noise(scr)
     dark = 0
@@ -225,14 +226,14 @@ def _load_screen(clock, insert, frames):
             scr.blit(_cassette(f * 10), (C.WIDTH // 2 - 160, y))
             if _wait(clock, 1):
                 return True
-    steps = ("Перемотка", "Чтение дорожек", "Синхронизация", "Готово")
+    steps = (t("Перемотка"), t("Чтение дорожек"), t("Синхронизация"), t("Готово"))
     bar_w = 360
     for lf in range(frames):
         scr.fill((0, 0, 0))
         scr.blit(_cassette(lf * 8, "B" if not insert else "A"), (C.WIDTH // 2 - 160, TARGET_Y))
         p = lf / (frames - 1)
         pulse = 0 if lf % 40 < 30 else 1
-        title = "ЗАГРУЗКА" + "." * (1 + (lf // 12) % 3) + " " * pulse
+        title = t("ЗАГРУЗКА") + "." * (1 + (lf // 12) % 3) + " " * pulse
         _alpha_text(S.font(22, True), title, (235, 235, 245), C.WIDTH // 2, TARGET_Y + 230, 255)
         _alpha_text(S.font(14), steps[min(3, int(p * 4))], (120, 220, 255),
                     C.WIDTH // 2, TARGET_Y + 262, 255)

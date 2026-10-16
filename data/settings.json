@@ -1,0 +1,13 @@
+{
+  "latency_ms": 0,
+  "scroll_ms": 900,
+  "music_volume": 75,
+  "sfx_volume": 60,
+  "lane_keys": [
+    "d",
+    "f",
+    "j",
+    "k"
+  ],
+  "lang": "en"
+}

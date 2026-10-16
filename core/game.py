@@ -14,6 +14,7 @@ import events as EV
 import settings
 import songs
 import style as S
+from i18n import t
 
 COUNTDOWN_MS = 3000
 COUNTDOWN_WORDS = (("3", -3000, -2000), ("2", -2000, -1000), ("1", -1000, -400),
@@ -71,6 +72,8 @@ class Game:
         for ev in chart.events:
             if ev["type"] == "image":
                 EV.image_surface(ev["file"], ev["w"])
+            elif ev["type"] == "video":
+                EV.natural_size(ev)
 
         self.hp = C.MAX_HP
         self.hp_show = float(C.MAX_HP)
@@ -91,9 +94,9 @@ class Game:
         self.finished = False
         self.failed = False
         self.to_menu = False
-        self.resume_btn = S.Btn((C.WIDTH // 2 - 150, 236, 300, 50), "ПРОДОЛЖИТЬ", C.CYAN,
+        self.resume_btn = S.Btn((C.WIDTH // 2 - 150, 236, 300, 50), t("ПРОДОЛЖИТЬ"), C.CYAN,
                                 S.font(18, True))
-        self.menu_btn = S.Btn((C.WIDTH // 2 - 150, 302, 300, 50), "В МЕНЮ", (255, 160, 90),
+        self.menu_btn = S.Btn((C.WIDTH // 2 - 150, 302, 300, 50), t("В МЕНЮ"), (255, 160, 90),
                               S.font(18, True))
 
 
@@ -424,15 +427,9 @@ class Game:
                     if ev["type"] == "flash"), default=0.0)
 
     def _draw_images(self, c, now):
-        for ev, surf in self.ev_active:
-            if ev["type"] != "image":
-                continue
-            alpha, ox, oy = EV.image_state(ev, now - ev["t"])
-            if alpha <= 0:
-                continue
-            surf.set_alpha(int(255 * alpha))
-            c.blit(surf, (C.WIDTH // 2 + ox - surf.get_width() // 2,
-                          C.HEIGHT // 2 + oy - surf.get_height() // 2))
+        for ev, _ in self.ev_active:
+            if ev["type"] in ("image", "video"):
+                EV.draw_media(c, ev, now - ev["t"])
 
     def _draw_lanes(self, c):
         for i in range(4):
@@ -599,7 +596,7 @@ class Game:
 
         judged = sum(self.counts.values())
         acc = 100.0 * sum(self.counts[g] * ACC_WEIGHT[g] for g in self.counts) / max(1, judged)
-        acc_txt = S.font(14).render(f"ТОЧНОСТЬ {acc:5.1f}%", True, C.GREY)
+        acc_txt = S.font(14).render(f"{t('ТОЧНОСТЬ')} {acc:5.1f}%", True, C.GREY)
         c.blit(acc_txt, (C.WIDTH - acc_txt.get_width() - 20, 42))
 
         if self.combo >= 2:
@@ -608,15 +605,15 @@ class Game:
                                                   _lighten(C.PURPLE_LIGHT, 0.3 * self.combo_pop))
             c.blit(combo_txt, (C.WIDTH // 2 - combo_txt.get_width() // 2, 60))
 
-        hint = cache.text(14, False, "ESC — пауза", (90, 90, 120))
+        hint = cache.text(14, False, t("ESC — пауза"), (90, 90, 120))
         c.blit(hint, (C.WIDTH // 2 - hint.get_width() // 2, C.HEIGHT - 26))
 
     def _draw_pause(self, mouse):
         scr = self._screen()
         scr.blit(self.veil, (0, 0))
-        S.glitch_title(scr, S.font(44, True), "ПАУЗА", C.CYAN, C.WIDTH // 2, 150,
+        S.glitch_title(scr, S.font(44, True), t("ПАУЗА"), C.CYAN, C.WIDTH // 2, 150,
                        self.frame % 200, length=40)
         self.resume_btn.draw(scr, mouse)
         self.menu_btn.draw(scr, mouse)
-        S.blit_text(scr, S.font(14), "P / ESC — продолжить, M — в меню", C.GREY,
-                    C.WIDTH // 2, 470)
+        S.blit_text(scr, S.font(14), t("P / ESC — продолжить, M — в меню"), C.GREY,
+                    C.WIDTH // 2, 446)

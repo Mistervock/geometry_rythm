@@ -8,8 +8,9 @@ import audio
 import config as C
 import settings
 import style as S
+from i18n import t
 
-ROW_H = 40
+ROW_H = 36
 TOP = 110
 
 ROWS = (
@@ -21,19 +22,22 @@ ROWS = (
     ("key1", "Клавиша дорожки 2", "key"),
     ("key2", "Клавиша дорожки 3", "key"),
     ("key3", "Клавиша дорожки 4", "key"),
+    ("lang", "Язык", "lang"),
     ("reset", "Сбросить настройки", "action"),
     ("back", "НАЗАД", "action"),
 )
 
 
 def _value_text(kind_key, idx):
+    if kind_key == "lang":
+        return "Русский" if settings.get("lang") == "ru" else "English"
     if kind_key.startswith("key"):
         return settings.key_label(settings.get("lane_keys")[int(kind_key[3])]).upper()
     if kind_key == "latency_ms":
         v = settings.get(kind_key)
-        return f"{v:+d} мс"
+        return f"{v:+d} {t('мс')}"
     if kind_key == "scroll_ms":
-        return f"{settings.get(kind_key)} мс"
+        return f"{settings.get(kind_key)} {t('мс')}"
     return f"{settings.get(kind_key)} %"
 
 
@@ -63,14 +67,14 @@ def settings_screen(clock):
                 sys.exit()
             if waiting is not None and ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_ESCAPE:
-                    toast, toast_left = "Отменено", 1.5
+                    toast, toast_left = t("Отменено"), 1.5
                 else:
                     name = pygame.key.name(ev.key).lower()
                     if name and name not in ("unknown key",):
                         _set_lane_key(waiting, name)
-                        toast, toast_left = f"Дорожка {waiting + 1}: {settings.key_label(name)}", 2.0
+                        toast, toast_left = f"{t('Дорожка')} {waiting + 1}: {settings.key_label(name)}", 2.0
                     else:
-                        toast, toast_left = "Эта клавиша не подходит", 2.0
+                        toast, toast_left = t("Эта клавиша не подходит"), 2.0
                 waiting = None
                 continue
             if ev.type == pygame.KEYDOWN:
@@ -92,7 +96,7 @@ def settings_screen(clock):
                         return
                     if act == "wait":
                         waiting = int(ROWS[sel][0][3])
-                        toast, toast_left = "Нажмите новую клавишу (ESC — отмена)", 99
+                        toast, toast_left = t("Нажмите новую клавишу (ESC — отмена)"), 99
                     elif act:
                         toast, toast_left = act, 1.5
             elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
@@ -110,7 +114,7 @@ def settings_screen(clock):
                             return
                         if act == "wait":
                             waiting = int(key[3])
-                            toast, toast_left = "Нажмите новую клавишу (ESC — отмена)", 99
+                            toast, toast_left = t("Нажмите новую клавишу (ESC — отмена)"), 99
                         elif act:
                             toast, toast_left = act, 1.5
         _draw(sel, waiting, toast if toast_left > 0 else "", mouse, frame)
@@ -139,10 +143,13 @@ def _activate(idx):
     key, _, kind = ROWS[idx]
     if key.startswith("key"):
         return "wait"
+    if key == "lang":
+        settings.set("lang", "en" if settings.get("lang") == "ru" else "ru")
+        return ""
     if key == "reset":
         settings.reset()
         audio.set_music_volume()
-        return "Настройки сброшены"
+        return t("Настройки сброшены")
     if key == "back":
         return "back"
     return ""
@@ -152,7 +159,7 @@ def _draw(sel, waiting, toast, mouse, frame):
     scr = pygame.display.get_surface()
     scr.fill((0, 0, 0))
     S.draw_grid(scr, frame * 0.3, 0.0)
-    S.glitch_title(scr, S.font(36, True), "НАСТРОЙКИ", C.CYAN, C.WIDTH // 2, 56, frame)
+    S.glitch_title(scr, S.font(36, True), t("НАСТРОЙКИ"), C.CYAN, C.WIDTH // 2, 56, frame)
     area = pygame.Rect(120, TOP - 10, C.WIDTH - 240, len(ROWS) * ROW_H + 10)
     S.panel(scr, area, C.CYAN, alpha=215)
     for i, (key, label, kind) in enumerate(ROWS):
@@ -164,9 +171,9 @@ def _draw(sel, waiting, toast, mouse, frame):
             pygame.draw.rect(scr, C.CYAN, row, 2, border_radius=6)
         col = C.WHITE if active else (190, 190, 210)
         if kind == "action":
-            S.blit_text(scr, S.font(18, True), label, col, C.WIDTH // 2, y + (ROW_H - 6) // 2)
+            S.blit_text(scr, S.font(18, True), t(label), col, C.WIDTH // 2, y + (ROW_H - 6) // 2)
             continue
-        scr.blit(S.font(18, True).render(label, True, col), (row.x + 16, row.y + 12))
+        scr.blit(S.font(18, True).render(t(label), True, col), (row.x + 16, row.y + 12))
         if kind == "num":
             val = _value_text(key, i)
             vt = S.font(18, True).render(f"<  {val}  >", True, C.GOLD if active else C.GREY)
@@ -178,7 +185,7 @@ def _draw(sel, waiting, toast, mouse, frame):
                 val, vcol = _value_text(key, i), C.GOLD
             vt = S.font(18, True).render(val, True, vcol)
             scr.blit(vt, (row.right - vt.get_width() - 16, row.y + 12))
-    S.blit_text(scr, S.font(14), "← → изменить · ENTER выбрать · ESC назад", C.GREY,
+    S.blit_text(scr, S.font(14), t("← → изменить · ENTER выбрать · ESC назад"), C.GREY,
                 C.WIDTH // 2, C.HEIGHT - 26)
     if toast:
         S.blit_text(scr, S.font(16, True), toast, C.GOLD, C.WIDTH // 2, C.HEIGHT - 58)
