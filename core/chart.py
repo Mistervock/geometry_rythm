@@ -30,9 +30,12 @@ class Note:
 
 
 class Chart:
-    def __init__(self, song, name="Чарт", notes=None, path=None, events=None):
+    def __init__(self, song, name="Чарт", notes=None, path=None, events=None,
+                 charter="", difficulty=1):
         self.song = song
         self.name = name
+        self.charter = charter
+        self.difficulty = max(1, min(5, int(difficulty)))
         self.notes = list(notes or [])
         self.events = list(events or [])
         self.path = path
@@ -50,7 +53,8 @@ class Chart:
             if n.dur:
                 item["d"] = n.dur
             out.append(item)
-        out_data = {"version": 4, "song": self.song, "name": self.name, "notes": out}
+        out_data = {"version": 4, "song": self.song, "name": self.name,
+                    "charter": self.charter, "difficulty": self.difficulty, "notes": out}
         if self.events:
             out_data["events"] = self.events
         return out_data
@@ -67,8 +71,13 @@ class Chart:
             if 0 <= lane < LANES:
                 notes.append(Note(t, lane, dur))
         events = [e for e in (EV.normalize(raw) for raw in data.get("events", [])) if e is not None]
+        try:
+            difficulty = int(data.get("difficulty", 1))
+        except (TypeError, ValueError):
+            difficulty = 1
         chart = Chart(song=str(data.get("song", "")), name=str(data.get("name", "Чарт"))[:24],
-                      notes=notes, path=path, events=events)
+                      notes=notes, path=path, events=events,
+                      charter=str(data.get("charter", ""))[:40], difficulty=difficulty)
         chart.sort()
         chart.events.sort(key=lambda e: e["t"])
         return chart

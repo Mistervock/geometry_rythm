@@ -35,7 +35,8 @@ def main():
     except pygame.error:
         pass
     pygame.init()
-    screen = pygame.display.set_mode((C.WIDTH, C.HEIGHT))
+    import display
+    screen = display.apply()
     pygame.display.set_caption(C.TITLE)
     clock = pygame.time.Clock()
 

@@ -4,8 +4,11 @@ import sys
 
 import pygame
 
+import audio
 import config as C
+import display
 import editor
+import settings
 import songs
 import style as S
 from i18n import t
@@ -14,6 +17,8 @@ ROW_SONGS = 50
 VISIBLE_SONGS = 7
 ROW_CHARTS = 40
 VISIBLE_CHARTS = 8
+PREVIEW_MS = 15000
+PREVIEW_DELAY = 0.35
 
 
 def _loading(scr, text):
@@ -24,6 +29,19 @@ def _loading(scr, text):
 
 
 def songs_screen(clock):
+    try:
+        return _songs_loop(clock)
+    finally:
+        audio.stop_song()
+
+
+def _play_preview(name):
+    dur = songs.info(name).get("duration_ms", 0)
+    start = int(dur * 0.3) if dur > 40000 else 0
+    audio.play_song(songs.song_path(name), start)
+
+
+def _songs_loop(clock):
     names = songs.list_songs()
     if not names:
         return _empty_screen(clock)
@@ -39,6 +57,7 @@ def songs_screen(clock):
     confirm_del = False
     toast, toast_left = "", 0.0
     frame = 0
+    preview_song, pending, pending_left, preview_left = None, None, 0.0, 0.0
 
     back_btn = S.Btn((C.WIDTH // 2 - 70, 528, 140, 40), t("НАЗАД"), C.PURPLE_LIGHT, S.font(16, True))
     chart_btns = [
@@ -95,7 +114,7 @@ def songs_screen(clock):
         return None
 
     while True:
-        dt = min(0.05, clock.tick(C.FPS) / 1000.0)
+        dt = min(0.05, display.tick(clock) / 1000.0)
         frame += 1
         if toast_left > 0:
             toast_left -= dt
@@ -155,6 +174,28 @@ def songs_screen(clock):
             if isinstance(result, tuple) and result[0] == "play":
                 return result
             result = None
+
+        if view == "list" and settings.get("preview") and names:
+            target = names[sel_song]
+            if target != preview_song:
+                if preview_song is not None:
+                    audio.stop_song()
+                    preview_song = None
+                if pending != target:
+                    pending, pending_left = target, PREVIEW_DELAY
+                pending_left -= dt
+                if pending_left <= 0:
+                    preview_song, pending = target, None
+                    _play_preview(target)
+                    preview_left = PREVIEW_MS / 1000.0
+            else:
+                preview_left -= dt
+                if preview_left <= 0:
+                    _play_preview(target)
+                    preview_left = PREVIEW_MS / 1000.0
+        elif preview_song is not None or pending is not None:
+            audio.stop_song()
+            preview_song, pending = None, None
 
         if view == "list":
             if frame % 30 == 1:
@@ -227,7 +268,7 @@ def _draw_list(names, counts, sel, top, back_btn, mouse, frame):
             pygame.draw.rect(scr, C.CYAN, row, 2, border_radius=6)
         count = counts.get(names[idx], 0)
         col = C.WHITE if active else (190, 190, 210)
-        scr.blit(S.font(18, True).render(songs.title(names[idx]), True, col), (row.x + 14, row.y + 4))
+        scr.blit(S.font(18, True).render(songs.display_title(names[idx]), True, col), (row.x + 14, row.y + 4))
         sub = f"{t('чартов')}: {count}"
         scr.blit(S.font(14).render(sub, True, C.GREY), (row.x + 14, row.y + 26))
     S.blit_text(scr, S.font(14), t("Песни — файлы .ogg/.mp3/.wav в папке songs/"), C.GREY,
@@ -240,7 +281,7 @@ def _draw_charts(song, dur, charts, sel, top, chart_btns, back_btn, mouse, frame
     scr = pygame.display.get_surface()
     scr.fill((0, 0, 0))
     S.draw_grid(scr, frame * 0.3, 0.0)
-    S.glitch_title(scr, S.font(30, True), songs.title(song), C.GOLD, C.WIDTH // 2, 50, frame)
+    S.glitch_title(scr, S.font(30, True), songs.display_title(song), C.GOLD, C.WIDTH // 2, 50, frame)
     area = pygame.Rect(90, 96, C.WIDTH - 180, VISIBLE_CHARTS * ROW_CHARTS + 20)
     S.panel(scr, area, C.CYAN, alpha=215)
     if not charts:
@@ -258,10 +299,17 @@ def _draw_charts(song, dur, charts, sel, top, chart_btns, back_btn, mouse, frame
             pygame.draw.rect(scr, (34, 34, 68), row, border_radius=6)
             pygame.draw.rect(scr, C.CYAN, row, 2, border_radius=6)
         col = C.WHITE if active else (190, 190, 210)
-        scr.blit(S.font(16, True).render(ch.name, True, col), (row.x + 14, row.y + 9))
+        name_surf = S.font(16, True).render(ch.name, True, col)
+        scr.blit(name_surf, (row.x + 14, row.y + 3))
+        sx = row.x + 14 + name_surf.get_width() + 14
+        for k in range(5):
+            S.draw_star(scr, sx + k * 16 + 6, row.y + 12, 6, C.GOLD if k < ch.difficulty else C.DIM,
+                        filled=k < ch.difficulty)
         density = len(ch.notes) / max(1, dur / 1000.0)
         sub = f"{t('нот')}: {len(ch.notes)}   {t('плотность')}: {density:.2f}/{t('с')}"
-        scr.blit(S.font(14).render(sub, True, C.GREY), (row.x + 260, row.y + 11))
+        if ch.charter:
+            sub = f"{t('чарт')}: {ch.charter}   " + sub
+        scr.blit(S.font(13).render(sub, True, C.GREY), (row.x + 14, row.y + 19))
     for action, btn in chart_btns:
         btn.draw(scr, mouse, active=False)
     back_btn.draw(scr, mouse)
@@ -274,7 +322,7 @@ def _empty_screen(clock):
     back = S.Btn((C.WIDTH // 2 - 70, 380, 140, 40), t("НАЗАД"), C.PURPLE_LIGHT, S.font(16, True))
     frame = 0
     while True:
-        clock.tick(C.FPS)
+        display.tick(clock)
         frame += 1
         mouse = pygame.mouse.get_pos()
         for ev in pygame.event.get():

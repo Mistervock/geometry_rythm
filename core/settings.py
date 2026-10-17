@@ -16,6 +16,9 @@ DEFAULTS = {
     "sfx_volume": 60,
     "lane_keys": ["d", "f", "j", "k"],
     "lang": "en",
+    "fullscreen": 0,
+    "preview": 1,
+    "media_dim": 45,
 }
 
 LIMITS = {
@@ -23,6 +26,7 @@ LIMITS = {
     "scroll_ms": (500, 1500, 50),
     "music_volume": (0, 100, 5),
     "sfx_volume": (0, 100, 5),
+    "media_dim": (0, 90, 5),
 }
 
 _data = None
@@ -57,6 +61,8 @@ def _sanitize():
         d["lane_keys"] = list(DEFAULTS["lane_keys"])
     if d.get("lang") not in ("en", "ru"):
         d["lang"] = "en"
+    d["fullscreen"] = 1 if d.get("fullscreen") in (1, True) else 0
+    d["preview"] = 1 if d.get("preview") in (1, True) else 0
 
 
 def get(key):

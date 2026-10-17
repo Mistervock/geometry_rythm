@@ -8,6 +8,7 @@ import pygame
 
 import audio
 import config as C
+import display
 import style as S
 from i18n import t
 
@@ -44,7 +45,7 @@ def _pump():
 
 def _wait(clock, frames):
     for _ in range(frames):
-        clock.tick(C.FPS)
+        display.tick(clock)
         if _pump():
             return True
     return False
@@ -119,7 +120,7 @@ def _credit_frame(n, fade_out_start):
     if kv >= 0:
         ramp = min(1.0, kv / 90)
         ease = ramp * ramp * (3 - 2 * ramp)
-        _alpha_text(S.font(22, True), f"v{C.VERSION}", C.CYAN, C.WIDTH // 2, cy_mid + 30, 255 * ease)
+        _alpha_text(S.font(22, True), f"V{C.VERSION}", C.CYAN, C.WIDTH // 2, cy_mid + 30, 255 * ease)
 
     kp = n - PROMPT_START
     if kp >= 0:
@@ -147,7 +148,7 @@ def play_credits(clock):
     random.seed()
     n = 0
     while True:
-        clock.tick(C.FPS)
+        display.tick(clock)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()

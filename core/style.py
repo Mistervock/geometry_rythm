@@ -14,13 +14,14 @@ _band = None
 
 
 def font(size, bold=False):
-    key = (size, bold)
+    px = max(8, round(size * C.UI_FONT_SCALE))
+    key = (px, bold)
     if key not in _fonts:
         name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
         try:
-            _fonts[key] = pygame.font.Font(C.res("fonts", name), size)
+            _fonts[key] = pygame.font.Font(C.res("fonts", name), px)
         except Exception:
-            _fonts[key] = pygame.font.Font(None, size + 6)
+            _fonts[key] = pygame.font.Font(None, px + 6)
         _meta[id(_fonts[key])] = key
     return _fonts[key]
 
@@ -64,9 +65,12 @@ def _scanlines():
     return _scan
 
 
+SCANLINES = True
+
+
 def post_fx(surface, frame, grain=50, lines=True):
     global _band
-    if lines:
+    if lines and SCANLINES:
         surface.blit(_scanlines(), (0, 0))
     for _ in range(grain):
         c = random.randint(15, 55)
@@ -125,6 +129,23 @@ def draw_grid(surface, offset, pulse=0.0):
     for y in range(0, C.HEIGHT, 60):
         pygame.draw.line(surface, col, (0, (y + int(offset)) % C.HEIGHT),
                          (C.WIDTH, (y + int(offset)) % C.HEIGHT))
+
+
+def star_centers(cx, cy, total=5, gap=40):
+    start = cx - (total - 1) * gap / 2
+    return [(int(start + i * gap), cy) for i in range(total)]
+
+
+def draw_star(surface, cx, cy, r, color, filled=True):
+    pts = []
+    for i in range(10):
+        ang = -math.pi / 2 + i * math.pi / 5
+        rad = r if i % 2 == 0 else r * 0.45
+        pts.append((cx + math.cos(ang) * rad, cy + math.sin(ang) * rad))
+    if filled:
+        pygame.draw.polygon(surface, color, pts)
+    else:
+        pygame.draw.polygon(surface, color, pts, 2)
 
 
 def panel(surface, area, accent, alpha=215):

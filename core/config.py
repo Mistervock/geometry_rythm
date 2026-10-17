@@ -21,8 +21,9 @@ def root(*parts):
 
 
 TITLE = "Geometry Rhythm"
-VERSION = "1.0"
-WIDTH, HEIGHT = 800, 600
+VERSION = "0.2"
+WIDTH, HEIGHT = 1280, 720
+UI_FONT_SCALE = 1.2
 FPS = 60
 
 BG_DARK = (10, 10, 20)
@@ -43,11 +44,11 @@ LANE_LABELS = ("D", "F", "J", "K")
 LANE_COLORS = (CYAN, GREEN, PURPLE_LIGHT, GOLD)
 LANE_SHAPES = ("square", "triangle", "hexagon", "rhombus")
 
-LANE_W = 84
-LANE_GAP = 12
+LANE_W = 104
+LANE_GAP = 16
 FIELD_W = 4 * LANE_W + 3 * LANE_GAP
 FIELD_X = (WIDTH - FIELD_W) // 2
-HIT_Y = 500
+HIT_Y = 600
 SCROLL_MS = 900
 TRAVEL_PX = HIT_Y + 40
 

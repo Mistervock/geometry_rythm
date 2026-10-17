@@ -6,6 +6,7 @@ import sys
 import pygame
 
 import config as C
+import display
 import records
 import style as S
 from i18n import t
@@ -60,7 +61,7 @@ def main_menu(clock):
     selected = 0
     n = 0
     while True:
-        clock.tick(C.FPS)
+        display.tick(clock)
         mouse = pygame.mouse.get_pos()
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
@@ -99,7 +100,7 @@ def main_menu(clock):
         if n >= 12:
             _draw_beta(scr, n)
         if n >= 40:
-            S.blit_text(scr, S.font(14), f"D  F  J  K  —  {t('дорожки')}   ·   v{C.VERSION}",
+            S.blit_text(scr, S.font(14), f"D  F  J  K  —  {t('дорожки')}   ·   V{C.VERSION}",
                         C.GREY, C.WIDTH // 2, 214, 255 * S.smoothstep((n - 40) / 30))
 
         for i, (action, btn) in enumerate(buttons):
@@ -121,7 +122,7 @@ def records_screen(clock):
     entries = records.load()
     n = 0
     while True:
-        clock.tick(C.FPS)
+        display.tick(clock)
         mouse = pygame.mouse.get_pos()
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:

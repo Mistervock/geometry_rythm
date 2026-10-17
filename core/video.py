@@ -81,20 +81,23 @@ class _Player:
             if self.last is None:
                 continue
             src = self.last
-            if key != self.size:
-                interp = cv2.INTER_AREA if key[0] < self.size[0] else cv2.INTER_LINEAR
-                src = cv2.resize(src, key, interpolation=interp)
+            size, bright = key[:2], key[2]
+            if size != self.size:
+                interp = cv2.INTER_AREA if size[0] < self.size[0] else cv2.INTER_LINEAR
+                src = cv2.resize(src, size, interpolation=interp)
+            if bright < 1.0:
+                src = cv2.convertScaleAbs(src, alpha=bright, beta=0)
             rgb = cv2.cvtColor(src, cv2.COLOR_BGR2RGB).tobytes()
             with self.cond:
                 self.raw = (self.index, key, rgb)
                 self.emitted = (self.index, key)
         cap.release()
 
-    def frame(self, ms, w, h):
+    def frame(self, ms, w, h, bright=1.0):
         if not self.ok:
             return None
         target = max(0, int(ms * self.fps / 1000.0))
-        key = (w, h)
+        key = (w, h, round(bright, 3))
         with self.cond:
             if target != self.wanted or key != self.key:
                 self.wanted = target
@@ -107,7 +110,7 @@ class _Player:
         if ikey != key:
             return self.scaled
         if self.scaled_tag != (idx, key):
-            self.scaled = pygame.image.frombuffer(rgb, key, "RGB")
+            self.scaled = pygame.image.frombuffer(rgb, key[:2], "RGB")
             self.scaled_tag = (idx, key)
         return self.scaled
 
@@ -132,10 +135,10 @@ def _player(path, key):
     return p
 
 
-def frame(path, key, ms, w, h):
+def frame(path, key, ms, w, h, bright=1.0):
     if not AVAILABLE:
         return None
-    return _player(path, key).frame(ms, w, h)
+    return _player(path, key).frame(ms, w, h, bright)
 
 
 def size(path):

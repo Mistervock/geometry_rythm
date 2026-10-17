@@ -6,11 +6,12 @@ import pygame
 
 import audio
 import config as C
+import display
 import records
 import style as S
 from i18n import t
 
-ROW_H = 26
+ROW_H = 30
 
 
 def results_screen(clock, res):
@@ -26,15 +27,15 @@ def results_screen(clock, res):
     blink = 0
     n = 0
 
-    again_btn = S.Btn((C.WIDTH // 2 - 270, 512, 260, 44), t("ЕЩЁ РАЗ"), C.CYAN, S.font(18, True))
-    menu_btn = S.Btn((C.WIDTH // 2 + 10, 512, 260, 44), t("В МЕНЮ"), C.PURPLE_LIGHT, S.font(18, True))
+    again_btn = S.Btn((C.WIDTH // 2 - 290, 614, 280, 52), t("ЕЩЁ РАЗ"), C.CYAN, S.font(18, True))
+    menu_btn = S.Btn((C.WIDTH // 2 + 10, 614, 280, 52), t("В МЕНЮ"), C.PURPLE_LIGHT, S.font(18, True))
     if failed:
         audio.play("split", 0.5)
     else:
         audio.play("achieve", 0.5)
 
     while True:
-        clock.tick(C.FPS)
+        display.tick(clock)
         blink = (blink + 1) % 60
         mouse = pygame.mouse.get_pos()
         ready = n >= 40
@@ -73,49 +74,49 @@ def results_screen(clock, res):
         if k >= 0:
             title = t("ПРОВАЛ") if failed else t("ФИНИШ")
             col = C.RED_LIGHT if failed else C.GOLD
-            S.glitch_title(scr, S.font(44, True), title, col, C.WIDTH // 2, 92, k)
+            S.glitch_title(scr, S.font(44, True), title, col, C.WIDTH // 2, 110, k)
 
         if n >= 20 and res.get("song"):
             S.blit_text(scr, S.font(14), f"{res['song']} — {res.get('chart', '')}", C.GREY,
-                        C.WIDTH // 2, 124, 255 * S.smoothstep((n - 20) / 30))
+                        C.WIDTH // 2, 149, 255 * S.smoothstep((n - 20) / 30))
         if n >= 30:
             S.blit_text(scr, S.font(22, True), f"{t('ОЧКИ')}  {score:06d}", C.GOLD,
-                        C.WIDTH // 2, 150, S.smoothstep((n - 30) / 30) * 255)
+                        C.WIDTH // 2, 180, S.smoothstep((n - 30) / 30) * 255)
 
         if n >= 60:
             g_col = C.RED_LIGHT if grade == "F" else C.CYAN
-            S.blit_text(scr, S.font(52, True), grade, g_col, C.WIDTH // 2 - 90, 232,
+            S.blit_text(scr, S.font(52, True), grade, g_col, C.WIDTH // 2 - 90, 278,
                         255 * S.smoothstep((n - 60) / 30))
             S.blit_text(scr, S.font(18), f"{t('ТОЧНОСТЬ')} {res['acc']:.1f}%", C.WHITE,
-                        C.WIDTH // 2 + 60, 226, 255 * S.smoothstep((n - 60) / 30))
+                        C.WIDTH // 2 + 60, 271, 255 * S.smoothstep((n - 60) / 30))
             S.blit_text(scr, S.font(14), f"MAX COMBO {res['max_combo']}", C.GREY,
-                        C.WIDTH // 2 + 60, 252, 255 * S.smoothstep((n - 70) / 30))
+                        C.WIDTH // 2 + 60, 302, 255 * S.smoothstep((n - 70) / 30))
 
         if n >= 100:
             line = (f"PERFECT {counts['perfect']}   GREAT {counts['great']}   "
                     f"GOOD {counts['good']}   MISS {counts['miss']}")
-            S.blit_text(scr, S.font(14), line, C.GREY, C.WIDTH // 2, 296,
+            S.blit_text(scr, S.font(14), line, C.GREY, C.WIDTH // 2, 355,
                         255 * S.smoothstep((n - 100) / 30))
 
         if n >= 130 and can_record and saved is None:
-            box = pygame.Rect(C.WIDTH // 2 - 170, 340, 340, 48)
+            box = pygame.Rect(C.WIDTH // 2 - 210, 408, 420, 58)
             S.panel(scr, box, C.GOLD, alpha=220)
             S.blit_text(scr, S.font(14, True), t("ВВЕДИТЕ ИМЯ ДЛЯ РЕКОРДОВ"), C.GOLD,
-                        C.WIDTH // 2, 326)
+                        C.WIDTH // 2, 452)
             shown = name + ("|" if blink < 30 else " ")
-            S.blit_text(scr, S.font(22, True), shown, C.WHITE, C.WIDTH // 2, 364)
+            S.blit_text(scr, S.font(22, True), shown, C.WHITE, C.WIDTH // 2, 470)
             S.blit_text(scr, S.font(14), t("ENTER — сохранить, ESC — не сохранять"), C.GREY,
-                        C.WIDTH // 2, 404)
+                        C.WIDTH // 2, 500)
 
         if n >= 130 and (saved is not None or not can_record):
             shown_entries = saved[0] if saved is not None else entries
             highlight = saved[1] if saved is not None else None
             rows = shown_entries[:5]
-            px, py, pw = C.WIDTH // 2 - 200, 330, 400
+            px, py, pw = C.WIDTH // 2 - 240, 396, 480
             ph = 36 + max(1, len(rows)) * ROW_H
             S.panel(scr, pygame.Rect(px, py, pw, ph), C.GOLD, alpha=200)
             S.blit_text(scr, S.font(14, True), t("ТАБЛИЦА РЕКОРДОВ"), C.GOLD,
-                        C.WIDTH // 2, py + 16)
+                        C.WIDTH // 2, py + 19)
             for idx, e in enumerate(rows):
                 ka = n - (130 + idx * 8)
                 if ka < 0:
@@ -131,7 +132,7 @@ def results_screen(clock, res):
                 surf.set_alpha(int(alpha))
                 scr.blit(surf, (px + 16, py + 32 + idx * ROW_H))
             if not rows:
-                S.blit_text(scr, S.font(14), t("пока пусто"), C.GREY, C.WIDTH // 2, py + 50)
+                S.blit_text(scr, S.font(14), t("пока пусто"), C.GREY, C.WIDTH // 2, py + 60)
 
         if n >= 150:
             ready_btns = saved is not None or not can_record
@@ -139,7 +140,7 @@ def results_screen(clock, res):
                 again_btn.draw(scr, mouse)
                 menu_btn.draw(scr, mouse)
             S.blit_text(scr, S.font(14), t("SPACE — ещё раз, M — в меню"), (255, 210, 60),
-                        C.WIDTH // 2, 580)
+                        C.WIDTH // 2, 696)
 
         S.post_fx(scr, n, grain=50)
         if n < 20:

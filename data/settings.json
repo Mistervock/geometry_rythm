@@ -9,5 +9,8 @@
     "j",
     "k"
   ],
-  "lang": "en"
+  "lang": "en",
+  "fullscreen": 0,
+  "preview": 1,
+  "media_dim": 45
 }

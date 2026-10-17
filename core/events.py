@@ -5,11 +5,20 @@ import os
 import pygame
 
 import config as C
+import settings
 import video
 
-TYPES = ("glitch", "flash", "image", "bg", "video")
-TYPE_NAMES = {"glitch": "ГЛЮК", "flash": "ВСПЫШКА", "image": "КАРТИНКА (БЕТА)", "bg": "ФОН", "video": "ВИДЕО (БЕТА)"}
-TYPE_COLORS = {"glitch": C.RED_LIGHT, "flash": C.WHITE, "image": C.GOLD, "bg": (200, 200, 210), "video": (120, 200, 255)}
+TYPES = ("glitch", "flash", "image", "bg", "video", "heal")
+TYPE_NAMES = {"glitch": "ГЛЮК", "flash": "ВСПЫШКА", "image": "КАРТИНКА (БЕТА)", "bg": "ФОН", "video": "ВИДЕО (БЕТА)", "heal": "ХИЛЛ"}
+TYPE_COLORS = {"glitch": C.RED_LIGHT, "flash": C.WHITE, "image": C.GOLD, "bg": (200, 200, 210), "video": (120, 200, 255), "heal": C.WHITE}
+DESCRIPTIONS = {
+    "glitch": "Экран дрожит и рвётся на полосы. Сила и длительность настраиваются.",
+    "flash": "Белая вспышка: появляется за «скорость появления» и гаснет за «длительность».",
+    "image": "Картинка из папки images/ появляется в центре, может двигаться и плавно исчезать.",
+    "bg": "Меняет цвет фона. Кнопка «ВЕРНУТЬ ФОН» возвращает исходный цвет.",
+    "video": "Ролик из папки images/ на заданное время. «ПОДОГНАТЬ» вписывает его в экран.",
+    "heal": "Белый круг падает быстрее нот. Поймать нажатием клавиши — +1 HP, промах — только глитч, без урона.",
+}
 BASE_BG = tuple(C.BG_DARK)
 ANIMS = ("pop", "fade", "drift")
 ANIM_NAMES = {"pop": "РЕЗКО", "fade": "ПЛАВНО", "drift": "ДВИЖЕНИЕ"}
@@ -42,6 +51,8 @@ FIELDS = {
            ("g", "Зелёный", 0, 255, 8, BASE_BG[1]),
            ("b", "Синий", 0, 255, 8, BASE_BG[2]),
            ("fade", "Переход, мс", 0, 3000, 50, 500)),
+    "heal": (("lane", "Дорожка (1=D … 4=K)", 1, 4, 1, 1),
+             ("speed", "Скорость падения, %", 100, 300, 10, 170)),
 }
 
 
@@ -105,7 +116,7 @@ def normalize(raw):
 
 
 def total_ms(ev):
-    if ev["type"] == "bg":
+    if ev["type"] in ("bg", "heal"):
         return 0
     if ev["type"] == "flash":
         return ev["attack"] + ev["dur"]
@@ -147,10 +158,10 @@ _src = {}
 _scaled = {}
 
 
-def image_surface(name, width):
+def image_surface(name, width, bright=1.0):
     if not name:
         return None
-    key = (name, width)
+    key = (name, width, bright)
     surf = _scaled.get(key)
     if surf is not None:
         return surf
@@ -164,6 +175,9 @@ def image_surface(name, width):
         return None
     h = max(1, round(src.get_height() * width / src.get_width()))
     surf = pygame.transform.smoothscale(src, (width, h))
+    if bright < 1.0:
+        c = int(255 * bright)
+        surf.fill((c, c, c), special_flags=pygame.BLEND_RGB_MULT)
     _scaled[key] = surf
     return surf
 
@@ -224,15 +238,20 @@ def active_fx(events_list, now):
     return glitch, flash, images
 
 
+def media_bright():
+    return 1.0 - settings.get("media_dim") / 100.0
+
+
 def draw_media(surface, ev, elapsed):
     alpha, ox, oy = image_state(ev, elapsed)
     if alpha <= 0 or not ev.get("file"):
         return
+    bright = media_bright()
     if ev["type"] == "video":
         path = os.path.join(IMAGE_DIR, ev["file"])
-        img = video.frame(path, (path, ev["t"]), elapsed, ev["w"], ev["h"])
+        img = video.frame(path, (path, ev["t"]), elapsed, ev["w"], ev["h"], bright)
     else:
-        img = image_surface(ev["file"], ev["w"])
+        img = image_surface(ev["file"], ev["w"], bright)
     if img is None:
         return
     img.set_alpha(int(255 * alpha))
@@ -267,3 +286,13 @@ def fit_box(nw, nh, box_w, box_h):
     w = max(FIELDS["video"][1][2], min(FIELDS["video"][1][3], round(nw * scale)))
     h = max(FIELDS["video"][2][2], min(FIELDS["video"][2][3], round(nh * scale)))
     return w, h
+
+
+def stats(events_list):
+    counts = {k: 0 for k in TYPES}
+    media_ms = 0
+    for ev in events_list:
+        counts[ev["type"]] = counts.get(ev["type"], 0) + 1
+        if ev["type"] in ("image", "video"):
+            media_ms += ev["dur"]
+    return counts, media_ms

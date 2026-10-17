@@ -13,6 +13,7 @@ import config as C
 SONG_DIR = C.root("songs")
 CHART_DIR = C.root("data", "charts")
 INFO_DIR = C.root("data", "songinfo")
+META_DIR = C.root("data", "songmeta")
 LEGACY_CHART = C.root("data", "chart.json")
 EXTS = (".ogg", ".mp3", ".wav")
 
@@ -26,6 +27,30 @@ def list_songs():
 
 def title(song):
     return os.path.splitext(song)[0].replace("_", " ")
+
+
+def meta(song):
+    path = os.path.join(META_DIR, _safe(song) + ".json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_meta(song, data):
+    os.makedirs(META_DIR, exist_ok=True)
+    path = os.path.join(META_DIR, _safe(song) + ".json")
+    clean = {k: str(v).strip() for k, v in data.items() if str(v).strip()}
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(clean, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+def display_title(song):
+    return meta(song).get("title") or title(song)
 
 
 def song_path(song):

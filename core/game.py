@@ -10,6 +10,7 @@ import pygame
 import audio
 import cache
 import config as C
+import display
 import events as EV
 import settings
 import songs
@@ -64,9 +65,13 @@ class Game:
         self.music_started = False
         self.words_played = set()
         self.bg_events = sorted((e for e in chart.events if e["type"] == "bg"), key=lambda e: e["t"])
-        self.ev_queue = deque(sorted((e for e in chart.events if e["type"] != "bg"),
+        self.ev_queue = deque(sorted((e for e in chart.events if e["type"] not in ("bg", "heal")),
                                      key=lambda e: e["t"]))
         self.ev_active = []
+        self.heals = sorted(({"t": e["t"], "lane": e["lane"] - 1, "fall": self.scroll * 100.0 / e["speed"],
+                              "state": "wait", "hit_at": 0.0}
+                             for e in chart.events if e["type"] == "heal"), key=lambda h: h["t"])
+        self.heal_glitch = 0.0
         self.white = pygame.Surface((C.WIDTH, C.HEIGHT))
         self.white.fill(C.WHITE)
         for ev in chart.events:
@@ -103,7 +108,7 @@ class Game:
     def run(self):
         self.song.start(-COUNTDOWN_MS)
         while True:
-            dt = min(0.05, self.clock.tick(C.FPS) / 1000.0)
+            dt = min(0.05, display.tick(self.clock) / 1000.0)
             mouse = pygame.mouse.get_pos()
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
@@ -146,7 +151,7 @@ class Game:
             "max_combo": self.max_combo,
             "failed": self.failed,
             "total": self.total,
-            "song": songs.title(self.chart.song),
+            "song": songs.display_title(self.chart.song),
             "chart": self.chart.name,
             "action": "menu" if self.to_menu else "results",
         }
@@ -203,6 +208,15 @@ class Game:
     def _press(self, lane):
         now = self.now
         self.glow[lane] = 1.0
+        for h in self.heals:
+            if h["state"] == "wait" and h["lane"] == lane and abs(now - h["t"]) <= C.WIN_GOOD:
+                h["state"] = "hit"
+                h["hit_at"] = now
+                self.hp = min(C.MAX_HP, self.hp + 1)
+                self.popups.append({"text": "+HP", "sub": "", "x": self._lane_x(lane),
+                                    "y": C.HIT_Y - 70, "col": C.GREEN, "age": 0.0})
+                audio.play("upgrade", 0.45)
+                break
         q = self.pending[lane]
         best = None
         for n in list(q)[:3]:
@@ -239,6 +253,14 @@ class Game:
             if now >= start and word not in self.words_played:
                 self.words_played.add(word)
                 audio.play("upgrade" if word == "RYTHM!" else "tick", 0.5)
+
+        for h in self.heals:
+            if h["state"] == "wait" and now - h["t"] > C.WIN_GOOD:
+                h["state"] = "miss"
+                h["hit_at"] = now
+                self.heal_glitch = 0.35
+        self.heals = [h for h in self.heals if h["state"] == "wait" or now - h["hit_at"] < 0.4]
+        self.heal_glitch = max(0.0, self.heal_glitch - dt)
 
         for lane in range(4):
             q = self.pending[lane]
@@ -397,6 +419,7 @@ class Game:
         self._draw_images(c, now)
         self._draw_lanes(c)
         self._draw_notes(c, now)
+        self._draw_heals(c, now)
         self._draw_fx(c)
         self._draw_hud(c, now)
         if now < 0:
@@ -406,7 +429,8 @@ class Game:
         dy = random.randint(-2, 2) if self.shake_t > 0 else 0
         scr = self._screen()
         scr.blit(c, (dx, dy))
-        glitch = max(self.shake_t / 0.25 if self.shake_t > 0 else 0.0, self._event_glitch(now))
+        glitch = max(self.shake_t / 0.25 if self.shake_t > 0 else 0.0, self._event_glitch(now),
+                     self.heal_glitch / 0.35 * 0.7)
         if glitch > 0:
             S.glitch(scr, strength=glitch)
         flash = self._event_flash(now)
@@ -506,6 +530,25 @@ class Game:
                 y = C.HIT_Y - (n.t - now) * speed + age * 40
                 pygame.draw.rect(c, _mix(C.BG_DARK, C.DIM, 1 - age), (cx - 12, y - 12, 24, 24),
                                  border_radius=5)
+
+    def _draw_heals(self, c, now):
+        for h in self.heals:
+            cx = self._lane_x(h["lane"])
+            if h["state"] == "wait":
+                dt = h["t"] - now
+                if dt > h["fall"]:
+                    continue
+                y = C.HIT_Y - dt * C.TRAVEL_PX / h["fall"]
+                if y < -40:
+                    continue
+                pygame.draw.circle(c, C.LANE_COLORS[h["lane"]], (cx, int(y)), 19, 2)
+                pygame.draw.circle(c, C.WHITE, (cx, int(y)), 15)
+            elif h["state"] == "hit":
+                age = (now - h["hit_at"]) / 0.35
+                if age >= 1:
+                    continue
+                r = int(16 + 36 * S.ease_out_cubic(age))
+                pygame.draw.circle(c, _mix(C.BG_DARK, C.WHITE, 1 - age), (cx, C.HIT_Y), r, 3)
 
     def _blit_note(self, c, lane, cx, y, scale, alpha):
         if alpha <= 0:
