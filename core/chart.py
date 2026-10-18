@@ -31,13 +31,14 @@ class Note:
 
 class Chart:
     def __init__(self, song, name="Чарт", notes=None, path=None, events=None,
-                 charter="", difficulty=1):
+                 charter="", difficulty=1, folders=None):
         self.song = song
         self.name = name
         self.charter = charter
         self.difficulty = max(1, min(5, int(difficulty)))
         self.notes = list(notes or [])
         self.events = list(events or [])
+        self.folders = [dict(f) for f in (folders or [])]
         self.path = path
 
     def sort(self):
@@ -57,6 +58,8 @@ class Chart:
                     "charter": self.charter, "difficulty": self.difficulty, "notes": out}
         if self.events:
             out_data["events"] = self.events
+        if self.folders:
+            out_data["folders"] = self.folders
         return out_data
 
     @staticmethod
@@ -75,9 +78,21 @@ class Chart:
             difficulty = int(data.get("difficulty", 1))
         except (TypeError, ValueError):
             difficulty = 1
+        folders, seen = [], set()
+        for raw in data.get("folders", []):
+            if not isinstance(raw, dict):
+                continue
+            name = str(raw.get("name", ""))[:24]
+            if name and name not in seen:
+                seen.add(name)
+                folders.append({"name": name, "locked": bool(raw.get("locked", False))})
+        for e in events:
+            if e["folder"] not in seen:
+                e["folder"] = ""
         chart = Chart(song=str(data.get("song", "")), name=str(data.get("name", "Чарт"))[:24],
                       notes=notes, path=path, events=events,
-                      charter=str(data.get("charter", ""))[:40], difficulty=difficulty)
+                      charter=str(data.get("charter", ""))[:40], difficulty=difficulty,
+                      folders=folders)
         chart.sort()
         chart.events.sort(key=lambda e: e["t"])
         return chart

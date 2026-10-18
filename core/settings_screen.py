@@ -6,12 +6,15 @@ import pygame
 
 import audio
 import config as C
+import dialogs
 import display
 import settings
 import style as S
 from i18n import t
 
 ROW_H = 31
+ACTION_H = 40
+ACTION_GAP = 14
 TOP = 96
 
 ROWS = (
@@ -100,6 +103,8 @@ def settings_screen(clock):
                     toast_left = 1.2 if toast else 0.0
                 elif ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                     act = _activate(sel)
+                    if act == "reset":
+                        act = _reset(clock)
                     if act == "back":
                         return
                     if act == "wait":
@@ -118,6 +123,8 @@ def settings_screen(clock):
                         toast_left = 1.2 if toast else 0.0
                     else:
                         act = _activate(idx)
+                        if act == "reset":
+                            act = _reset(clock)
                         if act == "back":
                             return
                         if act == "wait":
@@ -129,12 +136,32 @@ def settings_screen(clock):
         pygame.display.flip()
 
 
+def _gap_before(i):
+    return ACTION_GAP if ROWS[i][2] == "action" and i > 0 and ROWS[i - 1][2] != "action" else 0
+
+
+def _row_h(i):
+    return ACTION_H if ROWS[i][2] == "action" else ROW_H
+
+
+def _row_y(i):
+    return TOP + sum(_row_h(j) + _gap_before(j) for j in range(i)) + _gap_before(i)
+
+
+def _panel_h():
+    last = len(ROWS) - 1
+    return _row_y(last) + _row_h(last) - TOP + 20
+
+
 def _row_index(pos):
     x, y = pos
     if y < TOP or not (140 <= x <= C.WIDTH - 140):
         return None
-    i = (y - TOP) // ROW_H
-    return i if 0 <= i < len(ROWS) else None
+    for i in range(len(ROWS)):
+        top = _row_y(i)
+        if top <= y < top + _row_h(i):
+            return i
+    return None
 
 
 def _toggle(key):
@@ -168,12 +195,18 @@ def _activate(idx):
         settings.set("lang", "en" if settings.get("lang") == "ru" else "ru")
         return ""
     if key == "reset":
-        settings.reset()
-        audio.set_music_volume()
-        return t("Настройки сброшены")
+        return "reset"
     if key == "back":
         return "back"
     return ""
+
+
+def _reset(clock):
+    if not dialogs.confirm(clock, t("Все настройки вернутся к значениям по умолчанию. Это нельзя отменить.")):
+        return ""
+    settings.reset()
+    audio.set_music_volume()
+    return t("Настройки сброшены")
 
 
 def _draw(sel, waiting, toast, mouse, frame):
@@ -181,18 +214,19 @@ def _draw(sel, waiting, toast, mouse, frame):
     scr.fill((0, 0, 0))
     S.draw_grid(scr, frame * 0.3, 0.0)
     S.glitch_title(scr, S.font(36, True), t("НАСТРОЙКИ"), C.CYAN, C.WIDTH // 2, 56, frame)
-    area = pygame.Rect(120, TOP - 10, C.WIDTH - 240, len(ROWS) * ROW_H + 10)
+    area = pygame.Rect(120, TOP - 10, C.WIDTH - 240, _panel_h())
     S.panel(scr, area, C.CYAN, alpha=215)
     for i, (key, label, kind) in enumerate(ROWS):
-        y = TOP + i * ROW_H
-        row = pygame.Rect(140, y, C.WIDTH - 280, ROW_H - 4)
+        y = _row_y(i)
+        h = _row_h(i)
+        row = pygame.Rect(140, y, C.WIDTH - 280, h - 4)
         active = i == sel
         if active:
             pygame.draw.rect(scr, (34, 34, 68), row, border_radius=6)
             pygame.draw.rect(scr, C.CYAN, row, 2, border_radius=6)
         col = C.WHITE if active else (190, 190, 210)
         if kind == "action":
-            S.blit_text(scr, S.font(18, True), t(label), col, C.WIDTH // 2, y + (ROW_H - 4) // 2)
+            S.blit_text(scr, S.font(18, True), t(label), col, C.WIDTH // 2, y + (h - 4) // 2)
             continue
         scr.blit(S.font(18, True).render(t(label), True, col), (row.x + 16, row.y + 5))
         if kind == "num":

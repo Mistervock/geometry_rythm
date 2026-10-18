@@ -63,6 +63,9 @@ def main():
             break
         if action == "records":
             menu.records_screen(clock)
+        elif action == "achievements":
+            import achievements_screen
+            achievements_screen.run(clock)
         elif action == "settings":
             settings_screen.settings_screen(clock)
         elif action == "songs":

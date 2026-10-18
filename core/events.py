@@ -6,11 +6,12 @@ import pygame
 
 import config as C
 import settings
+import style as S
 import video
 
-TYPES = ("glitch", "flash", "image", "bg", "video", "heal")
-TYPE_NAMES = {"glitch": "ГЛЮК", "flash": "ВСПЫШКА", "image": "КАРТИНКА (БЕТА)", "bg": "ФОН", "video": "ВИДЕО (БЕТА)", "heal": "ХИЛЛ"}
-TYPE_COLORS = {"glitch": C.RED_LIGHT, "flash": C.WHITE, "image": C.GOLD, "bg": (200, 200, 210), "video": (120, 200, 255), "heal": C.WHITE}
+TYPES = ("glitch", "flash", "image", "bg", "video", "heal", "card", "invert")
+TYPE_NAMES = {"glitch": "ГЛЮК", "flash": "ВСПЫШКА", "image": "КАРТИНКА (БЕТА)", "bg": "ФОН", "video": "ВИДЕО (БЕТА)", "heal": "ХИЛЛ", "card": "КАРТОЧКА", "invert": "ИНВЕРСИЯ"}
+TYPE_COLORS = {"glitch": C.RED_LIGHT, "flash": C.WHITE, "image": C.GOLD, "bg": (200, 200, 210), "video": (120, 200, 255), "heal": C.WHITE, "card": (255, 200, 110), "invert": (190, 140, 255)}
 DESCRIPTIONS = {
     "glitch": "Экран дрожит и рвётся на полосы. Сила и длительность настраиваются.",
     "flash": "Белая вспышка: появляется за «скорость появления» и гаснет за «длительность».",
@@ -18,6 +19,8 @@ DESCRIPTIONS = {
     "bg": "Меняет цвет фона. Кнопка «ВЕРНУТЬ ФОН» возвращает исходный цвет.",
     "video": "Ролик из папки images/ на заданное время. «ПОДОГНАТЬ» вписывает его в экран.",
     "heal": "Белый круг падает быстрее нот. Поймать нажатием клавиши — +1 HP, промах — только глитч, без урона.",
+    "card": "Текст на экране на заданное время. Плавно появляется и исчезает. Текст меняется в поле «Текст».",
+    "invert": "На заданное время весь экран становится негативом. Длительность настраивается.",
 }
 BASE_BG = tuple(C.BG_DARK)
 ANIMS = ("pop", "fade", "drift")
@@ -53,7 +56,10 @@ FIELDS = {
            ("fade", "Переход, мс", 0, 3000, 50, 500)),
     "heal": (("lane", "Дорожка (1=D … 4=K)", 1, 4, 1, 1),
              ("speed", "Скорость падения, %", 100, 300, 10, 170)),
+    "card": (("dur", "Длительность, мс", 300, 20000, 100, 2500),),
+    "invert": (("dur", "Длительность, мс", 50, 3000, 50, 200),),
 }
+CARD_TEXT_MAX = 80
 
 
 def list_media(kind):
@@ -71,7 +77,7 @@ def list_images():
 
 
 def _defaults(kind):
-    ev = {"type": kind, "t": 0}
+    ev = {"type": kind, "t": 0, "folder": "", "locked": False}
     for key, _, _, _, _, default in FIELDS[kind]:
         ev[key] = default
     if kind in ("image", "video"):
@@ -79,6 +85,8 @@ def _defaults(kind):
         ev["anim"] = "fade"
     if kind == "bg":
         ev["orig"] = False
+    if kind == "card":
+        ev["text"] = "Текст"
     return ev
 
 
@@ -105,6 +113,8 @@ def normalize(raw):
     kind = raw["type"]
     ev = _defaults(kind)
     ev["t"] = _num(raw.get("t"), 0, MAX_T, 0)
+    ev["folder"] = str(raw.get("folder", ""))[:24]
+    ev["locked"] = bool(raw.get("locked", False))
     for key, _, lo, hi, _, default in FIELDS[kind]:
         ev[key] = _num(raw.get(key), lo, hi, default)
     if kind in ("image", "video"):
@@ -112,6 +122,8 @@ def normalize(raw):
         ev["anim"] = raw.get("anim") if raw.get("anim") in ANIMS else "fade"
     if kind == "bg":
         ev["orig"] = bool(raw.get("orig", False))
+    if kind == "card":
+        ev["text"] = str(raw.get("text", "Текст"))[:CARD_TEXT_MAX] or "Текст"
     return ev
 
 
@@ -219,10 +231,70 @@ def image_state(ev, elapsed):
     return alpha, ev["x"], ev["y"]
 
 
+#-- Текстовая карточка и инверсия
+
+def card_alpha(ev, elapsed):
+    dur = ev["dur"]
+    if elapsed < 0 or elapsed >= dur:
+        return 0.0
+    fade = max(1, min(300, dur // 3))
+    return _clamp01(min(elapsed / fade, (dur - elapsed) / fade))
+
+
+def _wrap_text(fnt, text, width):
+    lines, line = [], ""
+    for ch in text:
+        cand = line + ch
+        if fnt.size(cand)[0] > width and line:
+            lines.append(line)
+            line = ch
+        else:
+            line = cand
+    if line:
+        lines.append(line)
+    return lines or [""]
+
+
+def draw_card(surface, ev, elapsed):
+    alpha = card_alpha(ev, elapsed)
+    if alpha <= 0 or not ev.get("text"):
+        return
+    fnt = S.font(44, True)
+    lines = _wrap_text(fnt, ev["text"], C.WIDTH - 160)
+    line_h = fnt.get_linesize()
+    top = C.HEIGHT // 2 - len(lines) * line_h // 2
+    width = max(fnt.size(line)[0] for line in lines) + 60
+    band = pygame.Surface((width, len(lines) * line_h + 30), pygame.SRCALPHA)
+    band.fill((0, 0, 0, int(150 * alpha)))
+    surface.blit(band, (C.WIDTH // 2 - width // 2, top - 15))
+    for i, line in enumerate(lines):
+        S.blit_text(surface, fnt, line, C.WHITE, C.WIDTH // 2, top + i * line_h + line_h // 2,
+                    int(255 * alpha))
+
+
+def invert_level(ev, elapsed):
+    return 1.0 if 0 <= elapsed < ev["dur"] else 0.0
+
+
+_neg = None
+
+
+def apply_invert(surface, level):
+    global _neg
+    if level <= 0:
+        return
+    if _neg is None or _neg.get_size() != surface.get_size():
+        _neg = pygame.Surface(surface.get_size())
+    _neg.fill((255, 255, 255))
+    _neg.blit(surface, (0, 0), special_flags=pygame.BLEND_RGB_SUB)
+    surface.blit(_neg, (0, 0))
+
+
 #-- Эффекты по времени (для редактора: считаются из позиции курсора)
 
 def active_fx(events_list, now):
-    glitch, flash, images = 0.0, 0.0, []
+    glitch, flash, invert = 0.0, 0.0, 0.0
+    images, cards = [], []
     for ev in events_list:
         if ev["type"] == "bg":
             continue
@@ -235,7 +307,11 @@ def active_fx(events_list, now):
             flash = max(flash, flash_alpha(ev, elapsed))
         elif ev["type"] in ("image", "video"):
             images.append((ev, elapsed))
-    return glitch, flash, images
+        elif ev["type"] == "card":
+            cards.append((ev, elapsed))
+        elif ev["type"] == "invert":
+            invert = max(invert, invert_level(ev, elapsed))
+    return glitch, flash, images, cards, invert
 
 
 def media_bright():
@@ -262,6 +338,11 @@ def draw_media(surface, ev, elapsed):
 def draw_images(surface, images):
     for ev, elapsed in images:
         draw_media(surface, ev, elapsed)
+
+
+def draw_cards(surface, cards):
+    for ev, elapsed in cards:
+        draw_card(surface, ev, elapsed)
 
 
 _natural = {}

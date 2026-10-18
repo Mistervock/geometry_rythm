@@ -167,7 +167,13 @@ class Btn:
         self.rect = pygame.Rect(rect)
         self.label = label
         self.color = color
-        self.fnt = fit(fnt or font(18), label, self.rect.w - 16)
+        self.base_fnt = fnt or font(18)
+        self.fnt = fit(self.base_fnt, label, self.rect.w - 16)
+
+    def set_label(self, label):
+        if label != self.label:
+            self.label = label
+            self.fnt = fit(self.base_fnt, label, self.rect.w - 16)
 
     def hovered(self, mouse):
         return self.rect.collidepoint(mouse)

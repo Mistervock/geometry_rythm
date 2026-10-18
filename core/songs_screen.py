@@ -1,5 +1,6 @@
 
 #-- Импорт
+import random
 import sys
 
 import pygame
@@ -15,8 +16,8 @@ from i18n import t
 
 ROW_SONGS = 50
 VISIBLE_SONGS = 7
-ROW_CHARTS = 40
-VISIBLE_CHARTS = 8
+ROW_CHARTS = 46
+VISIBLE_CHARTS = 7
 PREVIEW_MS = 15000
 PREVIEW_DELAY = 0.35
 
@@ -60,12 +61,19 @@ def _songs_loop(clock):
     preview_song, pending, pending_left, preview_left = None, None, 0.0, 0.0
 
     back_btn = S.Btn((C.WIDTH // 2 - 70, 528, 140, 40), t("НАЗАД"), C.PURPLE_LIGHT, S.font(16, True))
-    chart_btns = [
-        ("play", S.Btn((80, 470, 150, 42), t("ИГРАТЬ"), C.GREEN, S.font(16, True))),
-        ("edit", S.Btn((240, 470, 150, 42), t("РЕДАКТ."), C.CYAN, S.font(16, True))),
-        ("new", S.Btn((400, 470, 150, 42), t("НОВЫЙ"), C.GOLD, S.font(16, True))),
-        ("del", S.Btn((560, 470, 150, 42), t("УДАЛИТЬ"), C.RED_LIGHT, S.font(16, True))),
-    ]
+    random_btn = S.Btn((C.WIDTH // 2 + 90, 528, 200, 40), t("СЛУЧАЙНАЯ"), C.GOLD, S.font(16, True))
+    chart_specs = (
+        ("play", t("ИГРАТЬ"), C.GREEN, 150),
+        ("edit", t("РЕДАКТ."), C.CYAN, 150),
+        ("new", t("НОВЫЙ"), C.GOLD, 150),
+        ("del", t("УДАЛИТЬ"), C.RED_LIGHT, 150),
+        ("back", t("НАЗАД"), C.PURPLE_LIGHT, 140),
+    )
+    chart_btns = []
+    x = (C.WIDTH - (sum(w for *_, w in chart_specs) + 14 * (len(chart_specs) - 1))) // 2
+    for action, label, color, w in chart_specs:
+        chart_btns.append((action, S.Btn((x, 458, w, 42), label, color, S.font(16, True))))
+        x += w + 14
 
     def open_song(idx):
         nonlocal view, song, song_dur, charts, sel_chart, top_chart, confirm_del
@@ -88,7 +96,11 @@ def _songs_loop(clock):
                     sel_chart = i
 
     def do_action(action):
-        nonlocal toast, toast_left, confirm_del
+        nonlocal toast, toast_left, confirm_del, view
+        if action == "back":
+            view = "list"
+            confirm_del = False
+            return None
         if action == "play" and charts:
             return ("play", charts[sel_chart])
         if action == "edit" and charts:
@@ -125,7 +137,9 @@ def _songs_loop(clock):
                 pygame.quit()
                 sys.exit()
             if view == "list":
-                result = _list_event(ev, mouse, names, sel_song, top_song, back_btn)
+                result = _list_event(ev, mouse, names, sel_song, top_song, back_btn, random_btn)
+                if result == "random":
+                    result = _random_pick(names)
                 if isinstance(result, tuple) and result[0] == "select":
                     sel_song = result[1]
                     top_song = result[2]
@@ -160,15 +174,11 @@ def _songs_loop(clock):
                             result = do_action(action)
                             break
                     else:
-                        if back_btn.rect.collidepoint(ev.pos):
-                            view = "list"
+                        idx = _row_at(ev.pos, 106, ROW_CHARTS, VISIBLE_CHARTS, top_chart,
+                                      len(charts))
+                        if idx is not None:
+                            sel_chart = idx
                             confirm_del = False
-                        else:
-                            idx = _row_at(ev.pos, 106, ROW_CHARTS, VISIBLE_CHARTS, top_chart,
-                                          len(charts))
-                            if idx is not None:
-                                sel_chart = idx
-                                confirm_del = False
                 elif ev.type == pygame.MOUSEWHEEL:
                     top_chart = max(0, min(max(0, len(charts) - VISIBLE_CHARTS), top_chart - ev.y))
             if isinstance(result, tuple) and result[0] == "play":
@@ -205,13 +215,13 @@ def _songs_loop(clock):
                 top_song = sel_song
             if sel_song >= top_song + VISIBLE_SONGS:
                 top_song = sel_song - VISIBLE_SONGS + 1
-            _draw_list(names, counts, sel_song, top_song, back_btn, mouse, frame)
+            _draw_list(names, counts, sel_song, top_song, back_btn, random_btn, mouse, frame)
         else:
             if sel_chart < top_chart:
                 top_chart = sel_chart
             if sel_chart >= top_chart + VISIBLE_CHARTS:
                 top_chart = sel_chart - VISIBLE_CHARTS + 1
-            _draw_charts(song, song_dur, charts, sel_chart, top_chart, chart_btns, back_btn,
+            _draw_charts(song, song_dur, charts, sel_chart, top_chart, chart_btns,
                          mouse, frame, toast if toast_left > 0 else "")
         pygame.display.flip()
 
@@ -227,10 +237,19 @@ def _row_at(pos, top_y, row_h, visible, top, total):
     return idx if idx < total else None
 
 
-def _list_event(ev, mouse, names, sel, top, back_btn):
+def _random_pick(names):
+    pool = [ch for name in names for ch in songs.charts_for(name)]
+    if not pool:
+        return None
+    return ("play", random.choice(pool))
+
+
+def _list_event(ev, mouse, names, sel, top, back_btn, random_btn):
     if ev.type == pygame.KEYDOWN:
         if ev.key == pygame.K_ESCAPE:
             return "back"
+        if ev.key == pygame.K_r and names:
+            return "random"
         if ev.key in (pygame.K_UP, pygame.K_w):
             return ("select", max(0, sel - 1), top, False)
         if ev.key in (pygame.K_DOWN, pygame.K_s):
@@ -243,13 +262,15 @@ def _list_event(ev, mouse, names, sel, top, back_btn):
     elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
         if back_btn.rect.collidepoint(ev.pos):
             return "back"
+        if random_btn.rect.collidepoint(ev.pos) and names:
+            return "random"
         idx = _row_at(ev.pos, 120, ROW_SONGS, VISIBLE_SONGS, top, len(names))
         if idx is not None:
             return ("select", idx, top, True)
     return None
 
 
-def _draw_list(names, counts, sel, top, back_btn, mouse, frame):
+def _draw_list(names, counts, sel, top, back_btn, random_btn, mouse, frame):
     scr = pygame.display.get_surface()
     scr.fill((0, 0, 0))
     S.draw_grid(scr, frame * 0.3, 0.0)
@@ -274,10 +295,11 @@ def _draw_list(names, counts, sel, top, back_btn, mouse, frame):
     S.blit_text(scr, S.font(14), t("Песни — файлы .ogg/.mp3/.wav в папке songs/"), C.GREY,
                 C.WIDTH // 2, 500)
     back_btn.draw(scr, mouse)
+    random_btn.draw(scr, mouse)
     S.post_fx(scr, frame, grain=40)
 
 
-def _draw_charts(song, dur, charts, sel, top, chart_btns, back_btn, mouse, frame, toast):
+def _draw_charts(song, dur, charts, sel, top, chart_btns, mouse, frame, toast):
     scr = pygame.display.get_surface()
     scr.fill((0, 0, 0))
     S.draw_grid(scr, frame * 0.3, 0.0)
@@ -300,7 +322,7 @@ def _draw_charts(song, dur, charts, sel, top, chart_btns, back_btn, mouse, frame
             pygame.draw.rect(scr, C.CYAN, row, 2, border_radius=6)
         col = C.WHITE if active else (190, 190, 210)
         name_surf = S.font(16, True).render(ch.name, True, col)
-        scr.blit(name_surf, (row.x + 14, row.y + 3))
+        scr.blit(name_surf, (row.x + 14, row.y + 2))
         sx = row.x + 14 + name_surf.get_width() + 14
         for k in range(5):
             S.draw_star(scr, sx + k * 16 + 6, row.y + 12, 6, C.GOLD if k < ch.difficulty else C.DIM,
@@ -309,12 +331,11 @@ def _draw_charts(song, dur, charts, sel, top, chart_btns, back_btn, mouse, frame
         sub = f"{t('нот')}: {len(ch.notes)}   {t('плотность')}: {density:.2f}/{t('с')}"
         if ch.charter:
             sub = f"{t('чарт')}: {ch.charter}   " + sub
-        scr.blit(S.font(13).render(sub, True, C.GREY), (row.x + 14, row.y + 19))
+        scr.blit(S.font(13).render(sub, True, C.GREY), (row.x + 14, row.y + 21))
     for action, btn in chart_btns:
         btn.draw(scr, mouse, active=False)
-    back_btn.draw(scr, mouse)
     if toast:
-        S.blit_text(scr, S.font(14, True), toast, C.GOLD, C.WIDTH // 2, 452)
+        S.blit_text(scr, S.font(14, True), toast, C.GOLD, C.WIDTH // 2, 520)
     S.post_fx(scr, frame, grain=40)
 
 

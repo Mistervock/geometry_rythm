@@ -11,7 +11,8 @@ import records
 import style as S
 from i18n import t
 
-ITEMS = (("songs", "ПЕСНИ"), ("records", "РЕКОРДЫ"), ("settings", "НАСТРОЙКИ"), ("quit", "ВЫХОД"))
+ITEMS = (("songs", "ПЕСНИ"), ("records", "РЕКОРДЫ"), ("achievements", "ДОСТИЖЕНИЯ"),
+         ("settings", "НАСТРОЙКИ"), ("quit", "ВЫХОД"))
 BEAT_MS = 500
 BETA_ANGLE = 8
 _beta_img = None

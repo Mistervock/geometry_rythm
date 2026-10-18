@@ -241,6 +241,7 @@ class Editor:
         labels = [("continue", t("ПРОДОЛЖИТЬ")), ("save", t("СОХРАНИТЬ")),
                   ("save_exit", t("СОХРАНИТЬ И ВЫЙТИ")),
                   ("song", t("НАСТРОЙКИ ПЕСНИ")),
+                  ("achievements", t("ДОСТИЖЕНИЯ")),
                   ("auto", t("АВТО-РАЗМЕТКА (ЗАМЕНИТ НОТЫ)")),
                   ("exit", t("ВЫЙТИ БЕЗ СОХРАНЕНИЯ"))]
         self.menu_items = labels
@@ -255,6 +256,10 @@ class Editor:
         elif action == "save_exit":
             self._save()
             return "back"
+        elif action == "achievements":
+            self.menu_open = False
+            import achievement_editor
+            achievement_editor.run(self.clock)
         elif action == "song":
             self.menu_open = False
             if song_settings.run(self.clock, self.chart):
@@ -498,8 +503,8 @@ class Editor:
         scr = pygame.display.get_surface()
         scr.fill(events.bg_at(self.chart.events, self.cursor))
         S.draw_grid(scr, (self.cursor * 0.04) % 60, 0.0)
-        glitch_lvl, flash_lvl, images = events.active_fx(self.chart.events, self.cursor) \
-            if self.fx_on else (0.0, 0.0, [])
+        glitch_lvl, flash_lvl, images, cards, invert_lvl = events.active_fx(self.chart.events, self.cursor) \
+            if self.fx_on else (0.0, 0.0, [], [], 0.0)
         events.draw_images(scr, images)
 
         for i in range(4):
@@ -542,6 +547,7 @@ class Editor:
                               y - sprite.get_height() // 2))
 
         self._draw_heals(scr)
+        events.draw_cards(scr, cards)
         self._draw_events(scr)
         self._draw_overview(scr)
         self._draw_panel(scr, mouse)
@@ -550,6 +556,7 @@ class Editor:
             alpha = 255 * min(1.0, self.toast_left / 0.6)
             S.blit_text(scr, S.font(16, True), self.toast_text, C.GOLD, C.WIDTH // 2, 78, alpha)
 
+        events.apply_invert(scr, invert_lvl)
         if glitch_lvl > 0:
             S.glitch(scr, strength=glitch_lvl)
         if flash_lvl > 0:
@@ -570,7 +577,7 @@ class Editor:
                 disabled = self.menu_items[i][0] == "auto" and not autochart.AVAILABLE
                 btn.color = C.DIM if disabled else C.CYAN
                 btn.draw(scr, mouse, active=(i == self.menu_sel))
-            S.blit_text(scr, S.font(14), t("ESC — закрыть меню"), C.GREY, C.WIDTH // 2, 566)
+            S.blit_text(scr, S.font(14), t("ESC — закрыть меню"), C.GREY, C.WIDTH // 2, 624)
 
         S.post_fx(scr, self.frame, grain=20)
 

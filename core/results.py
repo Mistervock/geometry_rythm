@@ -99,14 +99,16 @@ def results_screen(clock, res):
                         255 * S.smoothstep((n - 100) / 30))
 
         if n >= 130 and can_record and saved is None:
-            box = pygame.Rect(C.WIDTH // 2 - 210, 408, 420, 58)
+            box = pygame.Rect(C.WIDTH // 2 - 260, 398, 520, 100)
             S.panel(scr, box, C.GOLD, alpha=220)
-            S.blit_text(scr, S.font(14, True), t("ВВЕДИТЕ ИМЯ ДЛЯ РЕКОРДОВ"), C.GOLD,
-                        C.WIDTH // 2, 452)
+            head = t("ВВЕДИТЕ ИМЯ ДЛЯ РЕКОРДОВ")
+            S.blit_text(scr, S.fit(S.font(14, True), head, 480), head, C.GOLD,
+                        C.WIDTH // 2, 424)
             shown = name + ("|" if blink < 30 else " ")
-            S.blit_text(scr, S.font(22, True), shown, C.WHITE, C.WIDTH // 2, 470)
-            S.blit_text(scr, S.font(14), t("ENTER — сохранить, ESC — не сохранять"), C.GREY,
-                        C.WIDTH // 2, 500)
+            S.blit_text(scr, S.font(22, True), shown, C.WHITE, C.WIDTH // 2, 456)
+            hint = t("ENTER — сохранить, ESC — не сохранять")
+            S.blit_text(scr, S.fit(S.font(14), hint, 480), hint, C.GREY,
+                        C.WIDTH // 2, 484)
 
         if n >= 130 and (saved is not None or not can_record):
             shown_entries = saved[0] if saved is not None else entries

@@ -421,6 +421,7 @@ class Game:
         self._draw_notes(c, now)
         self._draw_heals(c, now)
         self._draw_fx(c)
+        self._draw_cards(c, now)
         self._draw_hud(c, now)
         if now < 0:
             self._draw_countdown(c, now)
@@ -429,6 +430,7 @@ class Game:
         dy = random.randint(-2, 2) if self.shake_t > 0 else 0
         scr = self._screen()
         scr.blit(c, (dx, dy))
+        EV.apply_invert(scr, self._event_invert(now))
         glitch = max(self.shake_t / 0.25 if self.shake_t > 0 else 0.0, self._event_glitch(now),
                      self.heal_glitch / 0.35 * 0.7)
         if glitch > 0:
@@ -449,6 +451,15 @@ class Game:
     def _event_flash(self, now):
         return max((EV.flash_alpha(ev, now - ev["t"]) for ev, _ in self.ev_active
                     if ev["type"] == "flash"), default=0.0)
+
+    def _event_invert(self, now):
+        return max((EV.invert_level(ev, now - ev["t"]) for ev, _ in self.ev_active
+                    if ev["type"] == "invert"), default=0.0)
+
+    def _draw_cards(self, c, now):
+        for ev, _ in self.ev_active:
+            if ev["type"] == "card":
+                EV.draw_card(c, ev, now - ev["t"])
 
     def _draw_images(self, c, now):
         for ev, _ in self.ev_active:
