@@ -23,6 +23,12 @@ def play_chart(clock, chart, first):
         outcome = Game(clock, chart).run()
         if outcome["action"] == "menu":
             return
+        if not outcome["failed"] and chart.achievement:
+            import achievements
+            ach = achievements.find(chart.achievement)
+            if ach is not None:
+                fresh = achievements.unlock(chart.achievement)
+                outcome["achievement"] = {"name": ach["name"], "new": fresh}
         choice = results.results_screen(clock, outcome)
         if choice == "menu":
             return

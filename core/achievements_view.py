@@ -5,6 +5,7 @@ import pygame
 import config as C
 import events as EV
 import style as S
+import screen_setting as SS
 from i18n import t
 
 _thumbs = {}
@@ -26,9 +27,9 @@ def _thumb(name, size):
 
 
 def draw_thumb(scr, rect, name):
-    pygame.draw.rect(scr, (12, 12, 28), rect, border_radius=6)
-    pygame.draw.rect(scr, C.DIM, rect, 2, border_radius=6)
-    surf = _thumb(name, min(rect.w, rect.h) - 8)
+    pygame.draw.rect(scr, (12, 12, 28), rect, border_radius=SS.U(6))
+    pygame.draw.rect(scr, C.DIM, rect, SS.U(2), border_radius=SS.U(6))
+    surf = _thumb(name, min(rect.w, rect.h) - SS.U(8))
     if surf is not None:
         scr.blit(surf, surf.get_rect(center=rect.center))
 
@@ -43,15 +44,15 @@ def clip_text(fnt, text, max_w):
 
 def draw_row(scr, rect, data, selected):
     if selected:
-        pygame.draw.rect(scr, (34, 34, 68), rect, border_radius=6)
-        pygame.draw.rect(scr, C.CYAN, rect, 2, border_radius=6)
-    thumb = pygame.Rect(rect.x + 10, rect.y + 8, rect.h - 16, rect.h - 16)
+        pygame.draw.rect(scr, (34, 34, 68), rect, border_radius=SS.U(6))
+        pygame.draw.rect(scr, C.CYAN, rect, SS.U(2), border_radius=SS.U(6))
+    thumb = pygame.Rect(rect.x + SS.U(10), rect.y + SS.U(8), rect.h - SS.U(16), rect.h - SS.U(16))
     draw_thumb(scr, thumb, data["image"])
-    tx = thumb.right + 16
+    tx = thumb.right + SS.U(16)
     col = C.WHITE if selected else (190, 190, 210)
-    scr.blit(S.font(18, True).render(data["name"], True, col), (tx, rect.y + 10))
-    desc = clip_text(S.font(14), data["description"], rect.right - tx - 16)
-    scr.blit(S.font(14).render(desc, True, C.GREY), (tx, rect.y + 40))
+    scr.blit(S.font(18, True).render(data["name"], True, col), (tx, rect.y + SS.U(10)))
+    desc = clip_text(S.font(14), data["description"], rect.right - tx - SS.U(16))
+    scr.blit(S.font(14).render(desc, True, C.GREY), (tx, rect.y + SS.U(40)))
 
 
 def draw_detail(scr, rect, data):
@@ -59,11 +60,11 @@ def draw_detail(scr, rect, data):
     if data is None:
         S.blit_text(scr, S.font(16), t("Выберите достижение"), C.GREY, rect.centerx, rect.centery)
         return
-    scr.blit(S.font(20, True).render(data["name"], True, C.GOLD), (rect.x + 24, rect.y + 14))
+    scr.blit(S.font(20, True).render(data["name"], True, C.GOLD), (rect.x + SS.U(24), rect.y + SS.U(14)))
     fnt = S.font(15)
-    y = rect.y + 46
-    for line in wrap(fnt, data["description"] or t("Без описания"), rect.w - 48)[:3]:
-        scr.blit(fnt.render(line, True, C.WHITE), (rect.x + 24, y))
+    y = rect.y + SS.U(46)
+    for line in wrap(fnt, data["description"] or t("Без описания"), rect.w - SS.U(48))[:3]:
+        scr.blit(fnt.render(line, True, C.WHITE), (rect.x + SS.U(24), y))
         y += fnt.get_linesize()
 
 

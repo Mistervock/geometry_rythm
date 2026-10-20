@@ -17,6 +17,8 @@ _rings = {}
 _texts = {}
 _bands = {}
 _warmed = False
+_warm_keys = set()
+TEXT_LIMIT = 400
 
 COUNTDOWN_WORDS = ("3", "2", "1", "RYTHM!")
 COUNTDOWN_SIZE = 96
@@ -56,6 +58,8 @@ def _bake_text(font_size, bold, text, color):
 def warm():
     global _warmed
     t0 = time.perf_counter()
+    for store in (_notes, _rings, _texts, _bands):
+        store.clear()
     for lane in range(4):
         _bands[lane] = pygame.Surface((C.LANE_W, C.HEIGHT))
         _bands[lane].fill(C.LANE_COLORS[lane])
@@ -72,6 +76,10 @@ def warm():
         _texts[(COUNTDOWN_SIZE, True, name, col)] = _bake_text(COUNTDOWN_SIZE, True, name, col)
         _texts[(COUNTDOWN_SIZE, True, name, C.CYAN)] = _bake_text(COUNTDOWN_SIZE, True, name, C.CYAN)
     _texts[(14, False, t("ESC — пауза"), (90, 90, 120))] = _bake_text(14, False, t("ESC — пауза"), (90, 90, 120))
+    for size in range(22, 29):  # размеры комбо меняются от удара к удару
+        S.font(size, True)
+    _warm_keys.clear()
+    _warm_keys.update(_texts)
     _warmed = True
     return (time.perf_counter() - t0) * 1000.0
 
@@ -99,6 +107,10 @@ def text(font_size, bold, value, color):
     key = (font_size, bold, value, color)
     surf = _texts.get(key)
     if surf is None:
+        if len(_texts) >= TEXT_LIMIT:
+            # сбрасываем только подписи, которых не было при прогреве (например, «+12 ms»)
+            for k in [k for k in _texts if k not in _warm_keys]:
+                del _texts[k]
         surf = _bake_text(font_size, bold, value, color)
         _texts[key] = surf
     return surf

@@ -5,6 +5,7 @@ import pygame
 
 import config as C
 import display
+import screen_setting as SS
 import style as S
 from i18n import t
 
@@ -54,12 +55,12 @@ def confirm(clock, message, title=None, yes=None, no=None):
     """Окно «Вы точно желаете?». Возвращает True, если игрок подтвердил."""
     title = title or t("Вы точно желаете?")
     snap = _snapshot()
-    lines = _wrap(S.font(16), message, BOX_W - 60)
-    box = pygame.Rect(0, 0, BOX_W, 130 + len(lines) * 22 + 60)
+    lines = _wrap(S.font(16), message, SS.U(BOX_W - 60))
+    box = pygame.Rect(0, 0, SS.U(BOX_W), SS.U(130 + len(lines) * 22 + 60))
     box.center = (C.WIDTH // 2, C.HEIGHT // 2)
-    yes_btn = S.Btn((box.centerx - 150, box.bottom - 62, 130, 42), yes or t("ДА"),
+    yes_btn = S.Btn((box.centerx - SS.U(150), box.bottom - SS.U(62), SS.U(130), SS.U(42)), yes or t("ДА"),
                     C.RED_LIGHT, S.font(16, True))
-    no_btn = S.Btn((box.centerx + 20, box.bottom - 62, 130, 42), no or t("НЕТ"),
+    no_btn = S.Btn((box.centerx + SS.U(20), box.bottom - SS.U(62), SS.U(130), SS.U(42)), no or t("НЕТ"),
                    C.CYAN, S.font(16, True))
     frame = 0
     while True:
@@ -81,10 +82,10 @@ def confirm(clock, message, title=None, yes=None, no=None):
                 if no_btn.hovered(ev.pos):
                     return False
         scr = _begin_frame(snap, frame, box, C.RED_LIGHT)
-        S.glitch_title(scr, S.font(26, True), title, C.RED_LIGHT, box.centerx, box.y + 34, frame)
+        S.glitch_title(scr, S.font(26, True), title, C.RED_LIGHT, box.centerx, box.y + SS.U(34), frame)
         for i, line in enumerate(lines):
             S.blit_text(scr, S.font(16), line, (200, 200, 220), box.centerx,
-                        box.y + 84 + i * 22)
+                        box.y + SS.U(84) + i * SS.U(22))
         yes_btn.draw(scr, mouse)
         no_btn.draw(scr, mouse)
         _end_frame(scr, frame)
@@ -93,14 +94,14 @@ def confirm(clock, message, title=None, yes=None, no=None):
 def ask_text(clock, title, initial="", maxlen=24):
     """Окно ввода строки. Возвращает текст или None при отмене."""
     snap = _snapshot()
-    box = pygame.Rect(0, 0, BOX_W, 230)
+    box = pygame.Rect(0, 0, SS.U(BOX_W), SS.U(230))
     box.center = (C.WIDTH // 2, C.HEIGHT // 2)
-    field = pygame.Rect(box.x + 40, box.y + 92, box.w - 80, 44)
+    field = pygame.Rect(box.x + SS.U(40), box.y + SS.U(92), box.w - SS.U(80), SS.U(44))
     buf = str(initial)[:maxlen]
     fresh = True
-    ok_btn = S.Btn((box.centerx - 150, box.bottom - 62, 130, 42), t("ОК"), C.GREEN,
+    ok_btn = S.Btn((box.centerx - SS.U(150), box.bottom - SS.U(62), SS.U(130), SS.U(42)), t("ОК"), C.GREEN,
                    S.font(16, True))
-    cancel_btn = S.Btn((box.centerx + 20, box.bottom - 62, 130, 42), t("ОТМЕНА"), C.CYAN,
+    cancel_btn = S.Btn((box.centerx + SS.U(20), box.bottom - SS.U(62), SS.U(130), SS.U(42)), t("ОТМЕНА"), C.CYAN,
                        S.font(16, True))
     frame = 0
     while True:
@@ -132,12 +133,12 @@ def ask_text(clock, title, initial="", maxlen=24):
                 if cancel_btn.hovered(ev.pos):
                     return None
         scr = _begin_frame(snap, frame, box, C.CYAN)
-        S.glitch_title(scr, S.font(22, True), title, C.CYAN, box.centerx, box.y + 36, frame)
-        pygame.draw.rect(scr, (14, 14, 34), field, border_radius=6)
-        pygame.draw.rect(scr, C.CYAN, field, 2, border_radius=6)
+        S.glitch_title(scr, S.font(22, True), title, C.CYAN, box.centerx, box.y + SS.U(36), frame)
+        pygame.draw.rect(scr, (14, 14, 34), field, border_radius=SS.U(6))
+        pygame.draw.rect(scr, C.CYAN, field, SS.U(2), border_radius=SS.U(6))
         caret = "|" if (frame // 30) % 2 == 0 else " "
-        shown = S.fit(S.font(20, True), buf + caret, field.w - 20).render(buf + caret, True, C.WHITE)
-        scr.blit(shown, (field.x + 10, field.centery - shown.get_height() // 2))
+        shown = S.fit(S.font(20, True), buf + caret, field.w - SS.U(20)).render(buf + caret, True, C.WHITE)
+        scr.blit(shown, (field.x + SS.U(10), field.centery - shown.get_height() // 2))
         ok_btn.draw(scr, mouse)
         cancel_btn.draw(scr, mouse)
         _end_frame(scr, frame)
@@ -146,12 +147,12 @@ def ask_text(clock, title, initial="", maxlen=24):
 def choose(clock, title, options):
     """Окно выбора из списка. Возвращает индекс варианта или None."""
     snap = _snapshot()
-    row_h = 46
-    box = pygame.Rect(0, 0, BOX_W, 110 + len(options) * row_h + 24)
+    row_h = SS.U(46)
+    box = pygame.Rect(0, 0, SS.U(BOX_W), SS.U(110) + len(options) * row_h + SS.U(24))
     box.center = (C.WIDTH // 2, C.HEIGHT // 2)
     buttons = []
     for i, label in enumerate(options):
-        rect = pygame.Rect(box.x + 60, box.y + 84 + i * row_h, box.w - 120, 40)
+        rect = pygame.Rect(box.x + SS.U(60), box.y + SS.U(84) + i * row_h, box.w - SS.U(120), SS.U(40))
         buttons.append(S.Btn(rect, label, C.CYAN, S.font(16, True)))
     sel = 0
     frame = 0
@@ -177,7 +178,7 @@ def choose(clock, title, options):
                     if btn.hovered(ev.pos):
                         return i
         scr = _begin_frame(snap, frame, box, C.CYAN)
-        S.glitch_title(scr, S.font(22, True), title, C.CYAN, box.centerx, box.y + 34, frame)
+        S.glitch_title(scr, S.font(22, True), title, C.CYAN, box.centerx, box.y + SS.U(34), frame)
         for i, btn in enumerate(buttons):
             btn.draw(scr, mouse, active=i == sel)
         _end_frame(scr, frame)

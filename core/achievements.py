@@ -61,6 +61,52 @@ def save(data, path=None):
     return path
 
 
+UNLOCKED_PATH = C.root("data", "achievements_unlocked.json")
+
+
+def find(file_name):
+    """Ачивка по имени файла (как хранится в чарте). None, если файла уже нет."""
+    if not file_name:
+        return None
+    path = os.path.join(DIR, file_name)
+    if not os.path.isfile(path):
+        return None
+    try:
+        return load(path)
+    except (OSError, ValueError):
+        return None
+
+
+def _read_unlocked():
+    try:
+        with open(UNLOCKED_PATH, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        return set(str(x) for x in raw) if isinstance(raw, list) else set()
+    except (OSError, ValueError):
+        return set()
+
+
+def is_unlocked(file_name):
+    return file_name in _read_unlocked()
+
+
+def unlock(file_name):
+    """Отмечает ачивку полученной. Возвращает True, если она получена впервые."""
+    done = _read_unlocked()
+    if file_name in done:
+        return False
+    done.add(file_name)
+    try:
+        os.makedirs(os.path.dirname(UNLOCKED_PATH), exist_ok=True)
+        tmp = UNLOCKED_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(sorted(done), f, ensure_ascii=False, indent=1)
+        os.replace(tmp, UNLOCKED_PATH)
+    except OSError:
+        return False
+    return True
+
+
 def delete(path):
     try:
         os.remove(path)

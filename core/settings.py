@@ -17,6 +17,7 @@ DEFAULTS = {
     "lane_keys": ["d", "f", "j", "k"],
     "lang": "en",
     "fullscreen": 0,
+    "resolution": "1280x720",
     "preview": 1,
     "media_dim": 45,
 }

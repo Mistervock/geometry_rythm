@@ -31,7 +31,7 @@ class Note:
 
 class Chart:
     def __init__(self, song, name="Чарт", notes=None, path=None, events=None,
-                 charter="", difficulty=1, folders=None):
+                 charter="", difficulty=1, folders=None, achievement=""):
         self.song = song
         self.name = name
         self.charter = charter
@@ -39,6 +39,7 @@ class Chart:
         self.notes = list(notes or [])
         self.events = list(events or [])
         self.folders = [dict(f) for f in (folders or [])]
+        self.achievement = str(achievement or "")
         self.path = path
 
     def sort(self):
@@ -60,6 +61,8 @@ class Chart:
             out_data["events"] = self.events
         if self.folders:
             out_data["folders"] = self.folders
+        if self.achievement:
+            out_data["achievement"] = self.achievement
         return out_data
 
     @staticmethod
@@ -92,7 +95,7 @@ class Chart:
         chart = Chart(song=str(data.get("song", "")), name=str(data.get("name", "Чарт"))[:24],
                       notes=notes, path=path, events=events,
                       charter=str(data.get("charter", ""))[:40], difficulty=difficulty,
-                      folders=folders)
+                      folders=folders, achievement=str(data.get("achievement", ""))[:80])
         chart.sort()
         chart.events.sort(key=lambda e: e["t"])
         return chart

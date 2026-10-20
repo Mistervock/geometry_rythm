@@ -9,6 +9,7 @@ import config as C
 import dialogs
 import display
 import events as EV
+import screen_setting as SS
 import style as S
 import video
 from i18n import t
@@ -85,9 +86,15 @@ def _fmt(ms):
     return f"{ms // 60000}:{(ms // 1000) % 60:02d}.{ms % 1000:03d}"
 
 
+def _design(pos):
+    """Экранные координаты мыши → расчётные (те, в которых написана раскладка)."""
+    return int(pos[0] / SS.SCALE), int(pos[1] / SS.SCALE)
+
+
 def _draw_lock(scr, x, y, color):
-    pygame.draw.rect(scr, color, (x, y + 6, 10, 9), border_radius=2)
-    pygame.draw.arc(scr, color, pygame.Rect(x + 2, y, 6, 11), 0, math.pi, 2)
+    u = SS.U
+    pygame.draw.rect(scr, color, (x, y + u(6), u(10), u(9)), border_radius=u(2))
+    pygame.draw.arc(scr, color, pygame.Rect(x + u(2), y, u(6), u(11)), 0, math.pi, u(2))
 
 
 #-- Экран событий
@@ -120,8 +127,7 @@ class EventsScreen:
         for label, row_y, items in SECTIONS:
             self.section_labels.append((label, row_y))
             for i, (name, text) in enumerate(items):
-                rect = (100 + i * 132, row_y, 124, BTN_H)
-                btn = S.Btn(rect, t(text), C.CYAN, S.font(12, True))
+                btn = S.Btn(SS.UR(100 + i * 132, row_y, 124, BTN_H), t(text), C.CYAN, S.font(12, True))
                 self.buttons.append((name, btn))
                 self.btns[name] = btn
 
@@ -256,11 +262,12 @@ class EventsScreen:
             ev["orig"] = False
 
     def _row_at(self, pos):
-        if not (PANEL_X <= pos[0] <= PANEL_X + 380):
+        dx, dy = _design(pos)
+        if not (PANEL_X <= dx <= PANEL_X + 380):
             return None
         for i in range(len(self._fields())):
             y = FIELD_Y + i * FIELD_STEP
-            if y <= pos[1] < y + 24:
+            if y <= dy < y + 24:
                 return i
         return None
 
@@ -323,7 +330,7 @@ class EventsScreen:
         if size is None:
             self.status = t("Ролик не открылся") if ev["type"] == "video" else t("Картинка не найдена в images/")
             return
-        w, h = EV.fit_box(size[0], size[1], C.WIDTH, C.HEIGHT)
+        w, h = EV.fit_box(size[0], size[1], SS.REF_W, SS.REF_H)
         ev["w"] = w
         if ev["type"] == "video":
             ev["h"] = h
@@ -587,7 +594,7 @@ class EventsScreen:
 
     def _reset_rect(self):
         y = FIELD_Y + len(self._fields()) * FIELD_STEP + 6
-        return pygame.Rect(PANEL_X, y, 200, 30)
+        return pygame.Rect(PANEL_X, y, 200, 30)  # расчётные координаты
 
     #-- Просмотр
 
@@ -631,10 +638,10 @@ class EventsScreen:
                 self.white.set_alpha(int(255 * 0.85 * a))
                 scr.blit(self.white, (0, 0))
         progress = min(1.0, e / span)
-        pygame.draw.rect(scr, C.CYAN, (0, 0, int(C.WIDTH * progress), 4))
+        pygame.draw.rect(scr, C.CYAN, (0, 0, int(C.WIDTH * progress), SS.U(4)))
         title = f"{t('ПРОСМОТР')}: {t(EV.TYPE_NAMES[ev['type']])}   {e / 1000:.2f} {t('с')}"
-        S.blit_text(scr, S.font(18, True), title, C.WHITE, C.WIDTH // 2, 28)
-        S.blit_text(scr, S.font(13), t("P или ESC — вернуться к редактору"), C.GREY, C.WIDTH // 2, C.HEIGHT - 26)
+        S.blit_text(scr, S.font(18, True), title, C.WHITE, C.WIDTH // 2, SS.U(28))
+        S.blit_text(scr, S.font(13), t("P или ESC — вернуться к редактору"), C.GREY, C.WIDTH // 2, C.HEIGHT - SS.U(26))
         S.post_fx(scr, self.frame, grain=20)
 
     #-- Цикл
@@ -775,6 +782,7 @@ class EventsScreen:
         for name, btn in self.buttons:
             if btn.rect.collidepoint(pos):
                 return self._action(name)
+        pos = _design(pos)
         if self.cur is not None and self.cur["type"] == "bg" and self._reset_rect().collidepoint(pos):
             self._reset_color()
             return None
@@ -804,44 +812,50 @@ class EventsScreen:
     #-- Отрисовка
 
     def _draw_info(self, scr):
+        u = SS.U
         counts, media_ms = EV.stats(self.chart.events)
         top = LIST_Y + MAX_T_SHOWN * ROW + 12
-        scr.blit(S.font(13, True).render(t("СТАТИСТИКА"), True, (120, 160, 190)), (LIST_X, top))
+        scr.blit(S.font(13, True).render(t("СТАТИСТИКА"), True, (120, 160, 190)), SS.UP(LIST_X, top))
         media = f"{t('медиа')}: {media_ms / 1000:.1f} {t('с')}"
-        scr.blit(S.font(12).render(media, True, C.GREY), (LIST_X + LIST_W - S.font(12).size(media)[0], top + 2))
+        scr.blit(S.font(12).render(media, True, C.GREY),
+                 (u(LIST_X + LIST_W) - S.font(12).size(media)[0], u(top + 2)))
         for i, kind in enumerate(EV.TYPES):
             col, row = i % 2, i // 2
             text = f"{t(EV.TYPE_NAMES[kind])}: {counts[kind]}"
             scr.blit(S.font(12).render(text, True, EV.TYPE_COLORS[kind]),
-                     (LIST_X + col * 150, top + 18 + row * 16))
+                     SS.UP(LIST_X + col * 150, top + 18 + row * 16))
 
     def _draw_tooltip(self, scr, mouse, rows):
+        u = SS.U
         kind = None
         for name, btn in self.buttons:
             if name in EV.TYPES and btn.hovered(mouse):
                 kind = name
         x, y = mouse
-        if kind is None and LIST_X <= x < LIST_X + LIST_W and LIST_Y <= y < LIST_Y + MAX_T_SHOWN * ROW:
-            idx = self.top + (y - LIST_Y) // ROW
+        dx, dy = _design(mouse)
+        if kind is None and LIST_X <= dx < LIST_X + LIST_W and LIST_Y <= dy < LIST_Y + MAX_T_SHOWN * ROW:
+            idx = self.top + (dy - LIST_Y) // ROW
             if idx < len(rows) and rows[idx][0] == "event":
                 kind = rows[idx][1]["type"]
         if kind is None:
             return
         fnt = S.font(13)
-        lines = _wrap(t(EV.DESCRIPTIONS[kind]), fnt, 300)
-        w = max(fnt.size(line)[0] for line in lines) + 20
-        h = len(lines) * 17 + 14
-        bx = min(max(8, x + 16), C.WIDTH - w - 8)
-        by = min(max(8, y + 18), C.HEIGHT - h - 8)
+        lines = _wrap(t(EV.DESCRIPTIONS[kind]), fnt, u(300))
+        w = max(fnt.size(line)[0] for line in lines) + u(20)
+        h = len(lines) * u(17) + u(14)
+        bx = min(max(u(8), x + u(16)), C.WIDTH - w - u(8))
+        by = min(max(u(8), y + u(18)), C.HEIGHT - h - u(8))
         box = pygame.Rect(bx, by, w, h)
-        pygame.draw.rect(scr, (14, 14, 34), box, border_radius=6)
-        pygame.draw.rect(scr, EV.TYPE_COLORS[kind], box, 1, border_radius=6)
+        pygame.draw.rect(scr, (14, 14, 34), box, border_radius=u(6))
+        pygame.draw.rect(scr, EV.TYPE_COLORS[kind], box, u(1), border_radius=u(6))
         for i, line in enumerate(lines):
-            scr.blit(fnt.render(line, True, (210, 210, 230)), (bx + 10, by + 7 + i * 17))
+            scr.blit(fnt.render(line, True, (210, 210, 230)), (bx + u(10), by + u(7) + i * u(17)))
 
     def _draw_list(self, scr, rows):
+        u = SS.U
         if not rows:
-            S.blit_text(scr, S.font(13), t("Событий пока нет"), C.GREY, LIST_X + LIST_W // 2, LIST_Y + 20)
+            S.blit_text(scr, S.font(13), t("Событий пока нет"), C.GREY,
+                        u(LIST_X + LIST_W // 2), u(LIST_Y + 20))
         for i in range(min(MAX_T_SHOWN, max(0, len(rows) - self.top))):
             kind, payload = rows[self.top + i]
             y = LIST_Y + i * ROW
@@ -849,28 +863,28 @@ class EventsScreen:
                 selected = payload == self.sel_folder
                 folder = self._folder(payload)
                 pygame.draw.rect(scr, (40, 40, 70) if selected else (24, 34, 50),
-                                 (LIST_X, y, LIST_W, ROW - 4), border_radius=6)
+                                 SS.UR(LIST_X, y, LIST_W, ROW - 4), border_radius=u(6))
                 arrow = "▼" if payload in self.open_folders else "▶"
                 count = len(self._members(payload))
                 label = f"{arrow} {payload} ({count})"
                 col = C.GOLD if selected else (150, 190, 215)
-                scr.blit(S.font(13, True).render(label[:34], True, col), (LIST_X + 8, y + 4))
+                scr.blit(S.font(13, True).render(label[:34], True, col), SS.UP(LIST_X + 8, y + 4))
                 if folder and folder["locked"]:
-                    _draw_lock(scr, LIST_X + LIST_W - 20, y + 5, C.GOLD)
+                    _draw_lock(scr, u(LIST_X + LIST_W - 20), u(y + 5), C.GOLD)
                 continue
             ev = payload
             selected = ev is self.cur
             indent = 16 if ev.get("folder") else 0
             if selected:
-                pygame.draw.rect(scr, (40, 40, 70), (LIST_X, y, LIST_W, ROW - 4), border_radius=6)
+                pygame.draw.rect(scr, (40, 40, 70), SS.UR(LIST_X, y, LIST_W, ROW - 4), border_radius=u(6))
             color = EV.TYPE_COLORS[ev["type"]]
             label = f"{_fmt(ev['t'])}  {t(EV.TYPE_NAMES[ev['type']])}"
             if ev["type"] in ("image", "video") and ev["file"]:
                 label += f"  {ev['file']}"
             scr.blit(S.font(13, selected).render(label[:34 - indent // 2], True, color),
-                     (LIST_X + 8 + indent, y + 4))
+                     SS.UP(LIST_X + 8 + indent, y + 4))
             if ev.get("locked"):
-                _draw_lock(scr, LIST_X + LIST_W - 20, y + 5, C.GOLD)
+                _draw_lock(scr, u(LIST_X + LIST_W - 20), u(y + 5), C.GOLD)
 
     def _draw_folder_info(self, scr):
         f = self._folder(self.sel_folder)
@@ -883,16 +897,17 @@ class EventsScreen:
             (t("Выберите событие слева, чтобы положить его в папку или вынуть из неё."), (170, 170, 200), False),
         ]
         for i, (text, col, bold) in enumerate(lines):
-            scr.blit(S.font(15, bold).render(text, True, col), (PANEL_X, FIELD_Y + 4 + i * 26))
+            scr.blit(S.font(15, bold).render(text, True, col), SS.UP(PANEL_X, FIELD_Y + 4 + i * 26))
 
     def _draw(self, mouse):
+        u = SS.U
         scr = pygame.display.get_surface()
         if self.preview_t0 is not None:
             self._draw_preview(scr)
             return
         scr.fill(C.BG_DARK)
         S.draw_grid(scr, self.frame * 0.2, 0.0)
-        S.blit_text(scr, S.font(24, True), t("СОБЫТИЯ ПЕСНИ"), C.CYAN, C.WIDTH // 2, 24)
+        S.blit_text(scr, S.font(24, True), t("СОБЫТИЯ ПЕСНИ"), C.CYAN, C.WIDTH // 2, u(24))
 
         target_locked = (self._folder(self.sel_folder) or {}).get("locked") if self.sel_folder is not None \
             else bool(self.cur and self.cur.get("locked"))
@@ -900,7 +915,7 @@ class EventsScreen:
         self.btns["lock"].set_label(t("РАЗМКНУТЬ" if target_locked else "ЗАМКНУТЬ"))
 
         for label, row_y in self.section_labels:
-            scr.blit(S.font(12, True).render(t(label), True, (120, 160, 190)), (16, row_y + 9))
+            scr.blit(S.font(12, True).render(t(label), True, (120, 160, 190)), SS.UP(16, row_y + 9))
         for name, btn in self.buttons:
             btn.draw(scr, mouse)
 
@@ -913,49 +928,53 @@ class EventsScreen:
             self._draw_folder_info(scr)
         elif self.cur is None:
             S.blit_text(scr, S.font(16), t("Выберите событие слева или добавьте новое"),
-                        C.GREY, PANEL_X + 240, FIELD_Y + 20)
+                        C.GREY, u(PANEL_X + 240), u(FIELD_Y + 20))
         for i, (key, label, row_lo, _, _) in enumerate(fields):
             y = FIELD_Y + i * FIELD_STEP
             active = i == self.field
             if active:
-                pygame.draw.rect(scr, (40, 40, 70), (PANEL_X - 8, y - 1, 720, 26), border_radius=6)
-            scr.blit(S.font(13, active).render(t(label), True, C.WHITE if active else C.GREY), (PANEL_X, y + 5))
+                pygame.draw.rect(scr, (40, 40, 70), SS.UR(PANEL_X - 8, y - 1, 720, 26), border_radius=u(6))
+            scr.blit(S.font(13, active).render(t(label), True, C.WHITE if active else C.GREY),
+                     SS.UP(PANEL_X, y + 5))
             if self.edit_key == key:
                 caret = "_" if (self.frame // 30) % 2 == 0 else " "
                 value = S.font(13, True).render(self.edit_buf + caret, True, C.GOLD)
             else:
                 value = S.font(13, True).render(self._value_text(key)[:18], True, C.CYAN)
-            scr.blit(value, (PANEL_X + 432 - value.get_width() // 2, y + 5))
+            scr.blit(value, (u(PANEL_X + 432) - value.get_width() // 2, u(y + 5)))
             if row_lo is not None:
-                pygame.draw.rect(scr, C.DIM, (PANEL_X + 340, y, 22, 24), 1, border_radius=5)
-                pygame.draw.rect(scr, C.DIM, (PANEL_X + 500, y, 22, 24), 1, border_radius=5)
-                S.blit_text(scr, S.font(14, True), "−", C.WHITE, PANEL_X + 351, y + 12)
-                S.blit_text(scr, S.font(14, True), "+", C.WHITE, PANEL_X + 511, y + 12)
+                S.draw_disc(scr, u(PANEL_X + 351), u(y + 12), u(16))
+                S.draw_disc(scr, u(PANEL_X + 511), u(y + 12), u(16))
+                pygame.draw.rect(scr, C.DIM, SS.UR(PANEL_X + 340, y, 22, 24), u(1), border_radius=u(5))
+                pygame.draw.rect(scr, C.DIM, SS.UR(PANEL_X + 500, y, 22, 24), u(1), border_radius=u(5))
+                S.blit_text(scr, S.font(14, True), "−", C.WHITE, u(PANEL_X + 351), u(y + 12))
+                S.blit_text(scr, S.font(14, True), "+", C.WHITE, u(PANEL_X + 511), u(y + 12))
 
         if self.cur is not None and self.cur["type"] == "bg":
             rect = self._reset_rect()
-            pygame.draw.rect(scr, C.GOLD if rect.collidepoint(mouse) else C.DIM, rect, 2, border_radius=6)
-            S.blit_text(scr, S.font(13, True), t("ВЕРНУТЬ ИСХОДНЫЙ"), C.GOLD, rect.centerx, rect.centery)
-            swatch = pygame.Rect(rect.right + 12, rect.y, 60, rect.h)
-            pygame.draw.rect(scr, EV.bg_target(self.cur), swatch, border_radius=6)
-            pygame.draw.rect(scr, C.DIM, swatch, 1, border_radius=6)
+            prect = SS.UR(rect.x, rect.y, rect.w, rect.h)
+            pygame.draw.rect(scr, C.GOLD if prect.collidepoint(mouse) else C.DIM, prect, u(2), border_radius=u(6))
+            S.blit_text(scr, S.font(13, True), t("ВЕРНУТЬ ИСХОДНЫЙ"), C.GOLD, prect.centerx, prect.centery)
+            swatch = pygame.Rect(prect.right + u(12), prect.y, u(60), prect.h)
+            pygame.draw.rect(scr, EV.bg_target(self.cur), swatch, border_radius=u(6))
+            pygame.draw.rect(scr, C.DIM, swatch, u(1), border_radius=u(6))
 
         if self.cur is not None and self.field < len(fields):
             hint = t(HINTS.get(fields[self.field][0], ""))
-            S.blit_text(scr, S.font(13), hint, (170, 170, 200), C.WIDTH // 2, 560)
+            S.blit_text(scr, S.font(13), hint, (170, 170, 200), C.WIDTH // 2, u(560))
 
         beta = t("Картинки и ролики: кладите .png / .jpg / .mp4 / .webm в папку images/ рядом с main.py (БЕТА)")
-        S.blit_text(scr, S.font(13), beta, (150, 150, 190), C.WIDTH // 2, 592)
+        S.blit_text(scr, S.font(13), beta, (150, 150, 190), C.WIDTH // 2, u(592))
         self._draw_info(scr)
         self._draw_tooltip(scr, mouse, rows)
         if self.status:
-            S.blit_text(scr, S.font(13, True), self.status, C.GOLD, C.WIDTH // 2, 618)
+            S.blit_text(scr, S.font(13, True), self.status, C.GOLD, C.WIDTH // 2, u(618))
         S.blit_text(scr, S.font(12),
                     t("↑↓ событие · Enter раскрыть папку · Tab поле · ←→ изменить (Shift ×5) · 1–8 добавить · P просмотр · R исходный фон"),
-                    (110, 110, 150), C.WIDTH // 2, 652)
+                    (110, 110, 150), C.WIDTH // 2, u(652))
         S.blit_text(scr, S.font(12),
                     t("Ctrl+C копировать · Ctrl+V вставить · Ctrl+Shift+V всем таким · Ctrl+D копия · L замок · Del удалить · ESC назад"),
-                    (110, 110, 150), C.WIDTH // 2, 674)
+                    (110, 110, 150), C.WIDTH // 2, u(674))
         S.post_fx(scr, self.frame, grain=20)
 
 

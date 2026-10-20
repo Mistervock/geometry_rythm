@@ -5,6 +5,7 @@ import os
 import pygame
 
 import config as C
+import screen_setting as SS
 import settings
 import style as S
 import video
@@ -255,21 +256,53 @@ def _wrap_text(fnt, text, width):
     return lines or [""]
 
 
+_card_cache = {}
+
+
+def _card_layout(text):
+    """Перенос строк, готовые строки текста и подложка — один раз на текст и размер экрана."""
+    key = (text, C.WIDTH, C.HEIGHT)
+    entry = _card_cache.get(key)
+    if entry is None:
+        fnt = S.font(44, True)
+        lines = _wrap_text(fnt, text, C.WIDTH - SS.U(160))
+        line_h = fnt.get_linesize()
+        width = max(fnt.size(line)[0] for line in lines) + SS.U(60)
+        band = pygame.Surface((width, len(lines) * line_h + SS.U(30)), pygame.SRCALPHA)
+        band.fill((0, 0, 0, 150))
+        rendered = [fnt.render(line, True, C.WHITE) for line in lines]
+        entry = (line_h, width, band, rendered)
+        if len(_card_cache) > 32:
+            _card_cache.clear()
+        _card_cache[key] = entry
+    return entry
+
+
 def draw_card(surface, ev, elapsed):
     alpha = card_alpha(ev, elapsed)
     if alpha <= 0 or not ev.get("text"):
         return
-    fnt = S.font(44, True)
-    lines = _wrap_text(fnt, ev["text"], C.WIDTH - 160)
-    line_h = fnt.get_linesize()
-    top = C.HEIGHT // 2 - len(lines) * line_h // 2
-    width = max(fnt.size(line)[0] for line in lines) + 60
-    band = pygame.Surface((width, len(lines) * line_h + 30), pygame.SRCALPHA)
-    band.fill((0, 0, 0, int(150 * alpha)))
-    surface.blit(band, (C.WIDTH // 2 - width // 2, top - 15))
-    for i, line in enumerate(lines):
-        S.blit_text(surface, fnt, line, C.WHITE, C.WIDTH // 2, top + i * line_h + line_h // 2,
-                    int(255 * alpha))
+    line_h, width, band, rendered = _card_layout(ev["text"])
+    top = C.HEIGHT // 2 - len(rendered) * line_h // 2
+    band.set_alpha(int(255 * alpha))
+    surface.blit(band, (C.WIDTH // 2 - width // 2, top - SS.U(15)))
+    a = int(255 * alpha)
+    for i, surf in enumerate(rendered):
+        surf.set_alpha(a)
+        surface.blit(surf, (C.WIDTH // 2 - surf.get_width() // 2,
+                            top + i * line_h + line_h // 2 - surf.get_height() // 2))
+
+
+def prewarm(events_list):
+    """Подготовка картинок и роликов до старта песни, чтобы не было заикания на показе."""
+    for ev in events_list:
+        if not ev.get("file"):
+            continue
+        if ev["type"] == "image":
+            image_surface(ev["file"], SS.U(ev["w"]), media_bright())
+        elif ev["type"] == "video":
+            path = os.path.join(IMAGE_DIR, ev["file"])
+            video.prepare(path, (path, ev["t"]))
 
 
 def invert_level(ev, elapsed):
@@ -323,16 +356,17 @@ def draw_media(surface, ev, elapsed):
     if alpha <= 0 or not ev.get("file"):
         return
     bright = media_bright()
+    w, h = SS.U(ev["w"]), SS.U(ev.get("h", 0))
     if ev["type"] == "video":
         path = os.path.join(IMAGE_DIR, ev["file"])
-        img = video.frame(path, (path, ev["t"]), elapsed, ev["w"], ev["h"], bright)
+        img = video.frame(path, (path, ev["t"]), elapsed, w, h, bright)
     else:
-        img = image_surface(ev["file"], ev["w"], bright)
+        img = image_surface(ev["file"], w, bright)
     if img is None:
         return
     img.set_alpha(int(255 * alpha))
-    surface.blit(img, (C.WIDTH // 2 + ox - img.get_width() // 2,
-                       C.HEIGHT // 2 + oy - img.get_height() // 2))
+    surface.blit(img, (C.WIDTH // 2 + SS.U(ox) - img.get_width() // 2,
+                       C.HEIGHT // 2 + SS.U(oy) - img.get_height() // 2))
 
 
 def draw_images(surface, images):

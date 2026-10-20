@@ -36,9 +36,25 @@ def play(name, volume=0.6):
         snd.play()
 
 
-def play_song(path, start_ms=0.0):
+_music_path = None
+
+
+def preload_song(path):
+    """Загрузка музыки заранее (до отсчёта), чтобы старт песни не тормозил."""
+    global _music_path
     try:
         pygame.mixer.music.load(path)
+        _music_path = path
+    except Exception:
+        _music_path = None
+
+
+def play_song(path, start_ms=0.0):
+    global _music_path
+    try:
+        if _music_path != path:
+            pygame.mixer.music.load(path)
+            _music_path = path
         pygame.mixer.music.set_volume(settings.get("music_volume") / 100.0)
         pygame.mixer.music.play(start=max(0.0, start_ms / 1000.0))
     except Exception:

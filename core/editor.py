@@ -12,6 +12,7 @@ import config as C
 import display
 import events
 import events_screen
+import screen_setting as SS
 import settings
 import song_settings
 import songs
@@ -73,8 +74,8 @@ class Editor:
         self.veil.fill((0, 0, 0, 185))
         self.speed_i = SPEEDS.index(1.0)
         self.drag = False
-        self.events_btn = S.Btn((PANEL_X, 110, 150, 40), t("СОБЫТИЯ"), C.CYAN, S.font(14, True))
-        self.speed_btns = [S.Btn((PANEL_X, 186 + i * 40, 150, 34), f"{v:g}×", C.GOLD, S.font(14, True))
+        self.events_btn = S.Btn(SS.UR(PANEL_X, 110, 150, 40), t("СОБЫТИЯ"), C.CYAN, S.font(14, True))
+        self.speed_btns = [S.Btn(SS.UR(PANEL_X, 186 + i * 40, 150, 34), f"{v:g}×", C.GOLD, S.font(14, True))
                            for i, v in enumerate(SPEEDS)]
         self._build_menu()
 
@@ -93,10 +94,10 @@ class Editor:
         return SPEEDS[self.speed_i]
 
     def time_to_y(self, t):
-        return HIT_Y - (t - self.cursor) * self.zoom
+        return HIT_Y - (t - self.cursor) * self.zoom * SS.SCALE
 
     def y_to_time(self, y):
-        return self.cursor + (HIT_Y - y) / self.zoom
+        return self.cursor + (HIT_Y - y) / (self.zoom * SS.SCALE)
 
     def snapped(self, t):
         return round(t / self.snap) * self.snap
@@ -245,7 +246,7 @@ class Editor:
                   ("auto", t("АВТО-РАЗМЕТКА (ЗАМЕНИТ НОТЫ)")),
                   ("exit", t("ВЫЙТИ БЕЗ СОХРАНЕНИЯ"))]
         self.menu_items = labels
-        self.menu_btns = [S.Btn((C.WIDTH // 2 - 210, 176 + i * 62, 420, 50), text, C.CYAN,
+        self.menu_btns = [S.Btn(SS.UR(SS.REF_W // 2 - 210, 176 + i * 62, 420, 50), text, C.CYAN,
                                 S.font(16, True)) for i, (_, text) in enumerate(labels)]
 
     def _menu_action(self, action):
@@ -465,11 +466,11 @@ class Editor:
 
     def _click(self, ev):
         x, y = ev.pos
-        if y < BAR_H + 2:
+        if y < SS.U(BAR_H) + SS.U(2):
             self.drag = True
             self._seek(x / C.WIDTH * self.duration)
             return None
-        if x >= PANEL_X:
+        if x >= SS.U(PANEL_X):
             if self.events_btn.rect.collidepoint(ev.pos):
                 events_screen.run(self.clock, self.chart, self.cursor, self.duration)
                 self.dirty = True
@@ -479,7 +480,7 @@ class Editor:
                     self._set_speed(i)
                     return None
             return None
-        if not (C.FIELD_X <= x < C.FIELD_X + C.FIELD_W) or y < 0 or y > C.HEIGHT - 60:
+        if not (C.FIELD_X <= x < C.FIELD_X + C.FIELD_W) or y < 0 or y > C.HEIGHT - SS.U(60):
             return None
         lane = (x - C.FIELD_X) // (C.LANE_W + C.LANE_GAP)
         if lane < 0 or lane > 3:
@@ -513,34 +514,34 @@ class Editor:
             band = cache.band(i)
             band.set_alpha(int(12 + 50 * self.flash[i]))
             scr.blit(band, (x, 0))
-            pygame.draw.line(scr, S_mix(C.GRID_COL, col, 0.35), (x, 0), (x, C.HEIGHT), 1)
+            pygame.draw.line(scr, S_mix(C.GRID_COL, col, 0.35), (x, 0), (x, C.HEIGHT), SS.U(1))
             pygame.draw.line(scr, S_mix(C.GRID_COL, col, 0.35), (x + C.LANE_W, 0),
-                             (x + C.LANE_W, C.HEIGHT), 1)
+                             (x + C.LANE_W, C.HEIGHT), SS.U(1))
 
         t_top = self.y_to_time(0)
         t_bot = self.y_to_time(C.HEIGHT)
         for sec in range(max(0, int(t_bot // 1000)), int(t_top // 1000) + 2):
             y = self.time_to_y(sec * 1000)
-            pygame.draw.line(scr, (38, 38, 70), (C.FIELD_X - 30, y), (C.FIELD_X + C.FIELD_W + 30, y), 1)
-            S.blit_text(scr, S.font(14), fmt_time(sec * 1000)[:-4], (90, 90, 130), 24, y, 255)
+            pygame.draw.line(scr, (38, 38, 70), (C.FIELD_X - SS.U(30), y), (C.FIELD_X + C.FIELD_W + SS.U(30), y), SS.U(1))
+            S.blit_text(scr, S.font(14), fmt_time(sec * 1000)[:-4], (90, 90, 130), SS.U(24), y, 255)
 
-        pygame.draw.line(scr, C.WHITE, (C.FIELD_X, HIT_Y), (C.FIELD_X + C.FIELD_W, HIT_Y), 2)
+        pygame.draw.line(scr, C.WHITE, (C.FIELD_X, HIT_Y), (C.FIELD_X + C.FIELD_W, HIT_Y), SS.U(2))
         for i in range(4):
             x = C.FIELD_X + i * (C.LANE_W + C.LANE_GAP)
-            pad = pygame.Rect(x + 4, HIT_Y - 22, C.LANE_W - 8, 44)
+            pad = pygame.Rect(x + SS.U(4), HIT_Y - SS.U(22), C.LANE_W - SS.U(8), SS.U(44))
             pygame.draw.rect(scr, S_mix(C.BG_DARK, C.LANE_COLORS[i], 0.2 + 0.5 * self.flash[i]),
-                             pad, border_radius=8)
-            pygame.draw.rect(scr, S_mix(C.DIM, C.LANE_COLORS[i], 0.6), pad, 2, border_radius=8)
+                             pad, border_radius=SS.U(8))
+            pygame.draw.rect(scr, S_mix(C.DIM, C.LANE_COLORS[i], 0.6), pad, SS.U(2), border_radius=SS.U(8))
             label = cache.text(16, True, settings.key_label(self.key_names[i]), C.LANE_COLORS[i])
-            scr.blit(label, (self._lane_x(i) - label.get_width() // 2, HIT_Y + 34))
+            scr.blit(label, (self._lane_x(i) - label.get_width() // 2, HIT_Y + SS.U(34)))
 
         for n in self.chart.notes:
             y = self.time_to_y(n.t)
             if n.dur > 0:
                 tail = self.time_to_y(n.end)
-                if tail < C.HEIGHT + 40 and y > -40:
+                if tail < C.HEIGHT + SS.U(40) and y > -SS.U(40):
                     self._draw_body(scr, n.lane, y, tail)
-            if y < -40 or y > C.HEIGHT + 40:
+            if y < -SS.U(40) or y > C.HEIGHT + SS.U(40):
                 continue
             sprite = cache.note(n.lane, 1.0)
             scr.blit(sprite, (self._lane_x(n.lane) - sprite.get_width() // 2,
@@ -554,7 +555,7 @@ class Editor:
         self._draw_hud(scr)
         if self.toast_left > 0 and self.toast_text:
             alpha = 255 * min(1.0, self.toast_left / 0.6)
-            S.blit_text(scr, S.font(16, True), self.toast_text, C.GOLD, C.WIDTH // 2, 78, alpha)
+            S.blit_text(scr, S.font(16, True), self.toast_text, C.GOLD, C.WIDTH // 2, SS.U(78), alpha)
 
         events.apply_invert(scr, invert_lvl)
         if glitch_lvl > 0:
@@ -564,32 +565,32 @@ class Editor:
             scr.blit(self.white, (0, 0))
 
         if self.name_edit:
-            box = pygame.Rect(C.WIDTH // 2 - 210, 300, 420, 60)
+            box = SS.UR(SS.REF_W // 2 - 210, 300, 420, 60)
             S.panel(scr, box, C.CYAN, alpha=230)
-            S.blit_text(scr, S.font(14, True), t("НАЗВАНИЕ ЧАРТА — ENTER"), C.CYAN, C.WIDTH // 2, 290)
+            S.blit_text(scr, S.font(14, True), t("НАЗВАНИЕ ЧАРТА — ENTER"), C.CYAN, C.WIDTH // 2, SS.U(290))
             shown = self.name_buf + ("|" if (self.frame // 30) % 2 == 0 else " ")
-            S.blit_text(scr, S.font(20, True), shown, C.WHITE, C.WIDTH // 2, 328)
+            S.blit_text(scr, S.font(20, True), shown, C.WHITE, C.WIDTH // 2, SS.U(328))
 
         if self.menu_open:
             scr.blit(self.veil, (0, 0))
-            S.glitch_title(scr, S.font(36, True), t("РЕДАКТОР"), C.CYAN, C.WIDTH // 2, 110, 60)
+            S.glitch_title(scr, S.font(36, True), t("РЕДАКТОР"), C.CYAN, C.WIDTH // 2, SS.U(110), 60)
             for i, btn in enumerate(self.menu_btns):
                 disabled = self.menu_items[i][0] == "auto" and not autochart.AVAILABLE
                 btn.color = C.DIM if disabled else C.CYAN
                 btn.draw(scr, mouse, active=(i == self.menu_sel))
-            S.blit_text(scr, S.font(14), t("ESC — закрыть меню"), C.GREY, C.WIDTH // 2, 624)
+            S.blit_text(scr, S.font(14), t("ESC — закрыть меню"), C.GREY, C.WIDTH // 2, SS.U(624))
 
         S.post_fx(scr, self.frame, grain=20)
 
     def _draw_body(self, scr, lane, y_head, y_tail):
-        top, bot = max(-10, min(y_head, y_tail)), min(C.HEIGHT + 10, max(y_head, y_tail))
+        top, bot = max(-SS.U(10), min(y_head, y_tail)), min(C.HEIGHT + SS.U(10), max(y_head, y_tail))
         if bot - top <= 0:
             return
         w = int(C.LANE_W * 0.42)
         x = self._lane_x(lane) - w // 2
         col = C.LANE_COLORS[lane]
-        pygame.draw.rect(scr, S_mix(C.BG_DARK, col, 0.45), (x, top, w, bot - top), border_radius=6)
-        pygame.draw.rect(scr, S_mix(C.BG_DARK, col, 0.7), (x, top, w, bot - top), 2, border_radius=6)
+        pygame.draw.rect(scr, S_mix(C.BG_DARK, col, 0.45), (x, top, w, bot - top), border_radius=SS.U(6))
+        pygame.draw.rect(scr, S_mix(C.BG_DARK, col, 0.7), (x, top, w, bot - top), SS.U(2), border_radius=SS.U(6))
 
     def _draw_heals(self, scr):
         for ev in self.chart.events:
@@ -598,15 +599,15 @@ class Editor:
             lane = ev["lane"] - 1
             x = self._lane_x(lane)
             y = self.time_to_y(ev["t"])
-            if -40 <= y <= C.HEIGHT + 40:
-                pygame.draw.circle(scr, C.LANE_COLORS[lane], (x, int(y)), 19, 2)
-                pygame.draw.circle(scr, C.WHITE, (x, int(y)), 15)
+            if -SS.U(40) <= y <= C.HEIGHT + SS.U(40):
+                pygame.draw.circle(scr, C.LANE_COLORS[lane], (x, int(y)), SS.U(19), SS.U(2))
+                pygame.draw.circle(scr, C.WHITE, (x, int(y)), SS.U(15))
 
     def _draw_panel(self, scr, mouse):
         if self.menu_open:
             return
         self.events_btn.draw(scr, mouse)
-        scr.blit(S.font(12, True).render(t("СКОРОСТЬ"), True, (120, 160, 190)), (PANEL_X, 168))
+        scr.blit(S.font(12, True).render(t("СКОРОСТЬ"), True, (120, 160, 190)), SS.UP(PANEL_X, 168))
         for i, btn in enumerate(self.speed_btns):
             btn.color = C.GOLD if i == self.speed_i else C.DIM
             btn.draw(scr, mouse, active=(i == self.speed_i))
@@ -615,47 +616,48 @@ class Editor:
         if self.playing:
             return
         grey, line_col, edge = (150, 150, 165), (80, 80, 92), (220, 220, 230)
-        x = C.FIELD_X + C.FIELD_W + 36
+        x = C.FIELD_X + C.FIELD_W + SS.U(36)
         for ev in self.chart.events:
             y = self.time_to_y(ev["t"])
             y_end = self.time_to_y(ev["t"] + events.total_ms(ev))
             lo, hi = min(y, y_end), max(y, y_end)
-            if hi < -20 or lo > C.HEIGHT + 20:
+            if hi < -SS.U(20) or lo > C.HEIGHT + SS.U(20):
                 continue
             top, bot = max(0, lo), min(C.HEIGHT, hi)
             if bot > top:
-                pygame.draw.line(scr, line_col, (x, top), (x, bot), 3)
+                pygame.draw.line(scr, line_col, (x, top), (x, bot), SS.U(3))
             if 0 <= y <= C.HEIGHT:
-                pts = [(x, y - 8), (x + 8, y), (x, y + 8), (x - 8, y)]
+                d = SS.U(8)
+                pts = [(x, y - d), (x + d, y), (x, y + d), (x - d, y)]
                 pygame.draw.polygon(scr, grey, pts)
-                pygame.draw.polygon(scr, edge, pts, 1)
+                pygame.draw.polygon(scr, edge, pts, SS.U(1))
                 label = cache.text(12, True, t(events.TYPE_NAMES[ev["type"]]), grey)
-                scr.blit(label, (x + 14, y - label.get_height() // 2))
+                scr.blit(label, (x + SS.U(14), y - label.get_height() // 2))
 
     def _draw_overview(self, scr):
-        pygame.draw.rect(scr, (30, 30, 50), (0, 0, C.WIDTH, BAR_H))
+        pygame.draw.rect(scr, (30, 30, 50), (0, 0, C.WIDTH, SS.U(BAR_H)))
         prog = self.cursor / max(1, self.duration)
-        pygame.draw.rect(scr, C.CYAN, (0, 0, int(C.WIDTH * prog), BAR_H))
+        pygame.draw.rect(scr, C.CYAN, (0, 0, int(C.WIDTH * prog), SS.U(BAR_H)))
         for n in self.chart.notes:
             x = int(n.t / max(1, self.duration) * C.WIDTH)
-            pygame.draw.line(scr, C.LANE_COLORS[n.lane], (x, 0), (x, BAR_H), 1)
+            pygame.draw.line(scr, C.LANE_COLORS[n.lane], (x, 0), (x, SS.U(BAR_H)), SS.U(1))
         if not self.playing:
             for ev in self.chart.events:
                 x = int(ev["t"] / max(1, self.duration) * C.WIDTH)
-                pygame.draw.rect(scr, events.TYPE_COLORS[ev["type"]], (x - 1, BAR_H + 2, 3, 6))
+                pygame.draw.rect(scr, events.TYPE_COLORS[ev["type"]], (x - SS.U(1), SS.U(BAR_H + 2), SS.U(3), SS.U(6)))
 
     def _draw_hud(self, scr):
         status = "▶" if self.playing else "❚❚"
         left = f"{status}  {fmt_time(self.cursor)} / {fmt_time(self.duration)}"
-        scr.blit(S.font(16, True).render(left, True, C.WHITE), (14, 16))
+        scr.blit(S.font(16, True).render(left, True, C.WHITE), SS.UP(14, 16))
         name = f"{songs.display_title(self.chart.song)} — {self.chart.name}" + ("  *" if self.dirty else "")
-        scr.blit(S.font(14).render(name, True, C.GREY), (14, 40))
+        scr.blit(S.font(14).render(name, True, C.GREY), SS.UP(14, 40))
         info = f"{t('нот')}: {len(self.chart.notes)}   {t('сетка')}: {self.snap} {t('мс')}   {t('масштаб')}: {self.zoom:.2f}   V {t('эффекты')}: {t('ВКЛ') if self.fx_on else t('ВЫКЛ')}"
         info_surf = S.font(14).render(info, True, C.GREY)
-        scr.blit(info_surf, (C.WIDTH - info_surf.get_width() - 14, 16))
+        scr.blit(info_surf, (C.WIDTH - info_surf.get_width() - SS.U(14), SS.U(16)))
         hint = t("SPACE играть · ←→ курсор · PgUp/PgDn ±5 с · -/= скорость · G сетка · Del удалить · ESC меню")
         h = S.font(14).render(hint, True, (110, 110, 150))
-        scr.blit(h, (C.WIDTH // 2 - h.get_width() // 2, C.HEIGHT - 22))
+        scr.blit(h, (C.WIDTH // 2 - h.get_width() // 2, C.HEIGHT - SS.U(22)))
 
 
 def S_mix(a, b, k):

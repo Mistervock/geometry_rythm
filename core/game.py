@@ -14,6 +14,7 @@ import display
 import events as EV
 import settings
 import songs
+import screen_setting as SS
 import style as S
 from i18n import t
 
@@ -57,6 +58,8 @@ class Game:
         self.scroll = float(settings.get("scroll_ms"))
 
         self.song = audio.SongClock()
+        audio.preload_song(songs.song_path(chart.song))
+        EV.prewarm(chart.events)
         self.canvas = pygame.Surface((C.WIDTH, C.HEIGHT))
         self.veil = pygame.Surface((C.WIDTH, C.HEIGHT), pygame.SRCALPHA)
         self.veil.fill((0, 0, 0, 185))
@@ -99,9 +102,9 @@ class Game:
         self.finished = False
         self.failed = False
         self.to_menu = False
-        self.resume_btn = S.Btn((C.WIDTH // 2 - 150, 236, 300, 50), t("ПРОДОЛЖИТЬ"), C.CYAN,
+        self.resume_btn = S.Btn(SS.UR(640 - 150, 236, 300, 50), t("ПРОДОЛЖИТЬ"), C.CYAN,
                                 S.font(18, True))
-        self.menu_btn = S.Btn((C.WIDTH // 2 - 150, 302, 300, 50), t("В МЕНЮ"), (255, 160, 90),
+        self.menu_btn = S.Btn(SS.UR(640 - 150, 302, 300, 50), t("В МЕНЮ"), (255, 160, 90),
                               S.font(18, True))
 
 
@@ -214,7 +217,7 @@ class Game:
                 h["hit_at"] = now
                 self.hp = min(C.MAX_HP, self.hp + 1)
                 self.popups.append({"text": "+HP", "sub": "", "x": self._lane_x(lane),
-                                    "y": C.HIT_Y - 70, "col": C.GREEN, "age": 0.0})
+                                    "y": C.HIT_Y - SS.U(70), "col": C.GREEN, "age": 0.0})
                 audio.play("upgrade", 0.45)
                 break
         q = self.pending[lane]
@@ -289,9 +292,8 @@ class Game:
 
         while self.ev_queue and now >= self.ev_queue[0]["t"]:
             ev = self.ev_queue.popleft()
-            surf = EV.image_surface(ev["file"], ev["w"]) if ev["type"] == "image" else None
-            if ev["type"] != "image" or surf is not None:
-                self.ev_active.append((ev, surf))
+            # картинки и ролики подготовлены заранее (EV.prewarm); рисуются через EV.draw_media
+            self.ev_active.append((ev, None))
         self.ev_active = [(ev, s) for ev, s in self.ev_active if now - ev["t"] < EV.total_ms(ev)]
 
         for i in range(4):
@@ -308,7 +310,7 @@ class Game:
         for p in self.parts:
             p["x"] += p["vx"] * dt
             p["y"] += p["vy"] * dt
-            p["vy"] += 260 * dt
+            p["vy"] += 260 * SS.SCALE * dt
             p["life"] -= dt
         self.parts = [p for p in self.parts if p["life"] > 0]
         for p in self.popups:
@@ -342,14 +344,14 @@ class Game:
         count = 16 if grade == "perfect" else 9
         for _ in range(count):
             ang = random.uniform(0, math.tau)
-            sp = random.uniform(120, 320)
+            sp = random.uniform(120, 320) * SS.SCALE
             life = random.uniform(0.3, 0.6)
             self.parts.append({"x": cx, "y": cy, "vx": math.cos(ang) * sp,
-                               "vy": math.sin(ang) * sp - 60, "life": life, "max": life,
+                               "vy": math.sin(ang) * sp - 60 * SS.SCALE, "life": life, "max": life,
                                "col": col})
         sub = f"{offset_ms:+.0f} ms" if grade != "perfect" else ""
         self.popups.append({"text": GRADE_TEXT[grade], "sub": sub, "x": cx,
-                            "y": C.HIT_Y - 70, "col": GRADE_COL[grade], "age": 0.0})
+                            "y": C.HIT_Y - SS.U(70), "col": GRADE_COL[grade], "age": 0.0})
         audio.play("catch" if grade == "perfect" else "tick", 0.45)
         if self.combo > 0 and self.combo % 10 == 0:
             audio.play("combo", 0.5)
@@ -361,7 +363,7 @@ class Game:
         n.hit_at = self.now
         self.score += HOLD_BONUS * self._mult()
         self.popups.append({"text": "HOLD", "sub": "", "x": self._lane_x(n.lane),
-                            "y": C.HIT_Y - 70, "col": C.GREEN, "age": 0.0})
+                            "y": C.HIT_Y - SS.U(70), "col": C.GREEN, "age": 0.0})
         if n in self.holds:
             self.holds.remove(n)
         audio.play("shield", 0.35)
@@ -372,7 +374,7 @@ class Game:
         n.hit_at = self.now
         self.combo = 0
         self.popups.append({"text": "BREAK", "sub": "", "x": self._lane_x(n.lane),
-                            "y": C.HIT_Y - 70, "col": C.RED_LIGHT, "age": 0.0})
+                            "y": C.HIT_Y - SS.U(70), "col": C.RED_LIGHT, "age": 0.0})
         if n in self.holds:
             self.holds.remove(n)
         audio.play("hurt", 0.3)
@@ -385,7 +387,7 @@ class Game:
         self.combo = 0
         self.hp -= 1
         self.popups.append({"text": GRADE_TEXT["miss"], "sub": "", "x": self._lane_x(n.lane),
-                            "y": C.HIT_Y - 70, "col": C.RED_LIGHT, "age": 0.0})
+                            "y": C.HIT_Y - SS.U(70), "col": C.RED_LIGHT, "age": 0.0})
         self.shake_t = 0.25
         audio.play("hurt", 0.5)
         if self.hp <= 0:
@@ -426,8 +428,8 @@ class Game:
         if now < 0:
             self._draw_countdown(c, now)
 
-        dx = random.randint(-4, 4) if self.shake_t > 0 else 0
-        dy = random.randint(-2, 2) if self.shake_t > 0 else 0
+        dx = random.randint(-SS.U(4), SS.U(4)) if self.shake_t > 0 else 0
+        dy = random.randint(-SS.U(2), SS.U(2)) if self.shake_t > 0 else 0
         scr = self._screen()
         scr.blit(c, (dx, dy))
         EV.apply_invert(scr, self._event_invert(now))
@@ -473,33 +475,33 @@ class Game:
             band = cache.band(i)
             band.set_alpha(int(12 + 55 * self.glow[i]))
             c.blit(band, (x, 0))
-            pygame.draw.line(c, _mix(C.GRID_COL, col, 0.35), (x, 0), (x, C.HEIGHT), 1)
+            pygame.draw.line(c, _mix(C.GRID_COL, col, 0.35), (x, 0), (x, C.HEIGHT), SS.U(1))
             pygame.draw.line(c, _mix(C.GRID_COL, col, 0.35), (x + C.LANE_W, 0),
-                             (x + C.LANE_W, C.HEIGHT), 1)
+                             (x + C.LANE_W, C.HEIGHT), SS.U(1))
 
-        pygame.draw.line(c, C.WHITE, (C.FIELD_X, C.HIT_Y), (C.FIELD_X + C.FIELD_W, C.HIT_Y), 2)
+        pygame.draw.line(c, C.WHITE, (C.FIELD_X, C.HIT_Y), (C.FIELD_X + C.FIELD_W, C.HIT_Y), SS.U(2))
         for i in range(4):
             x = C.FIELD_X + i * (C.LANE_W + C.LANE_GAP)
             col = C.LANE_COLORS[i]
             k = self.glow[i]
-            pad = pygame.Rect(x + 4, C.HIT_Y - 22, C.LANE_W - 8, 44)
+            pad = pygame.Rect(x + SS.U(4), C.HIT_Y - SS.U(22), C.LANE_W - SS.U(8), SS.U(44))
             pygame.draw.rect(c, _lighten(_mix(C.BG_DARK, col, 0.25 + 0.5 * k), 0.2 * k),
-                             pad, border_radius=8)
-            pygame.draw.rect(c, _lighten(_mix(C.DIM, col, 0.6), 0.6 * k), pad, 2, border_radius=8)
+                             pad, border_radius=SS.U(8))
+            pygame.draw.rect(c, _lighten(_mix(C.DIM, col, 0.6), 0.6 * k), pad, SS.U(2), border_radius=SS.U(8))
             label = cache.text(18, True, settings.key_label(self.key_names[i]), col)
-            c.blit(label, (x + C.LANE_W // 2 - label.get_width() // 2, C.HIT_Y + 40))
+            c.blit(label, (x + C.LANE_W // 2 - label.get_width() // 2, C.HIT_Y + SS.U(40)))
 
     def _draw_body(self, c, lane, y_head, y_tail, factor):
         top, bot = min(y_head, y_tail), max(y_head, y_tail)
-        top, bot = max(-10, top), min(C.HEIGHT + 10, bot)
+        top, bot = max(-SS.U(10), top), min(C.HEIGHT + SS.U(10), bot)
         if bot - top <= 0 or factor <= 0:
             return
         w = int(C.LANE_W * 0.42)
         x = self._lane_x(lane) - w // 2
         col = _mix(C.BG_DARK, C.LANE_COLORS[lane], 0.25 + 0.4 * factor)
-        pygame.draw.rect(c, col, (x, top, w, bot - top), border_radius=6)
+        pygame.draw.rect(c, col, (x, top, w, bot - top), border_radius=SS.U(6))
         pygame.draw.rect(c, _mix(C.BG_DARK, C.LANE_COLORS[lane], 0.7 * factor), (x, top, w, bot - top),
-                         2, border_radius=6)
+                         SS.U(2), border_radius=SS.U(6))
 
     def _draw_notes(self, c, now):
         speed = C.TRAVEL_PX / self.scroll
@@ -511,12 +513,12 @@ class Game:
                 if dt > self.scroll + 120:
                     break
                 y = C.HIT_Y - dt * speed
-                if y < -40:
+                if y < -SS.U(40):
                     continue
                 if n.dur > 0:
                     tail = C.HIT_Y - (n.end - now) * speed
                     self._draw_body(c, lane, y, tail, 0.8)
-                alpha = int(255 * S.clamp((y + 40) / 110))
+                alpha = int(255 * S.clamp((y + SS.U(40)) / SS.U(110)))
                 self._blit_note(c, lane, cx, y, 1.0, alpha)
             elif n.state == "hold":
                 tail = C.HIT_Y - (n.end - now) * speed
@@ -533,14 +535,14 @@ class Game:
                 age = (now - n.hit_at) / 0.4
                 if age >= 1:
                     continue
-                self._draw_body(c, lane, C.HIT_Y, C.HIT_Y - 60 * age, 0.6 * (1 - age))
+                self._draw_body(c, lane, C.HIT_Y, C.HIT_Y - SS.U(60) * age, 0.6 * (1 - age))
             else:
                 age = (now - n.hit_at) / 0.35
                 if age >= 1:
                     continue
-                y = C.HIT_Y - (n.t - now) * speed + age * 40
-                pygame.draw.rect(c, _mix(C.BG_DARK, C.DIM, 1 - age), (cx - 12, y - 12, 24, 24),
-                                 border_radius=5)
+                y = C.HIT_Y - (n.t - now) * speed + age * SS.U(40)
+                pygame.draw.rect(c, _mix(C.BG_DARK, C.DIM, 1 - age), (cx - SS.U(12), y - SS.U(12), SS.U(24), SS.U(24)),
+                                 border_radius=SS.U(5))
 
     def _draw_heals(self, c, now):
         for h in self.heals:
@@ -550,16 +552,16 @@ class Game:
                 if dt > h["fall"]:
                     continue
                 y = C.HIT_Y - dt * C.TRAVEL_PX / h["fall"]
-                if y < -40:
+                if y < -SS.U(40):
                     continue
-                pygame.draw.circle(c, C.LANE_COLORS[h["lane"]], (cx, int(y)), 19, 2)
-                pygame.draw.circle(c, C.WHITE, (cx, int(y)), 15)
+                pygame.draw.circle(c, C.LANE_COLORS[h["lane"]], (cx, int(y)), SS.U(19), SS.U(2))
+                pygame.draw.circle(c, C.WHITE, (cx, int(y)), SS.U(15))
             elif h["state"] == "hit":
                 age = (now - h["hit_at"]) / 0.35
                 if age >= 1:
                     continue
-                r = int(16 + 36 * S.ease_out_cubic(age))
-                pygame.draw.circle(c, _mix(C.BG_DARK, C.WHITE, 1 - age), (cx, C.HIT_Y), r, 3)
+                r = int(SS.U(16) + SS.U(36) * S.ease_out_cubic(age))
+                pygame.draw.circle(c, _mix(C.BG_DARK, C.WHITE, 1 - age), (cx, C.HIT_Y), r, SS.U(3))
 
     def _blit_note(self, c, lane, cx, y, scale, alpha):
         if alpha <= 0:
@@ -571,7 +573,7 @@ class Game:
     def _draw_fx(self, c):
         for rg in self.rings:
             e = S.ease_out_cubic(rg["age"] / rg["life"])
-            rad = int((18 + 60 * e) * (1.35 if rg["big"] else 1.0))
+            rad = int((SS.U(18) + SS.U(60) * e) * (1.35 if rg["big"] else 1.0))
             a = int(255 * (1 - e))
             if rad <= 0 or a <= 0:
                 continue
@@ -581,10 +583,10 @@ class Game:
         for p in self.parts:
             k = max(0.0, p["life"] / p["max"])
             col = _mix(C.BG_DARK, p["col"], k)
-            pygame.draw.rect(c, col, (int(p["x"]) - 2, int(p["y"]) - 2, 4, 4))
+            pygame.draw.rect(c, col, (int(p["x"]) - SS.U(2), int(p["y"]) - SS.U(2), SS.U(4), SS.U(4)))
         for p in self.popups:
             t = p["age"] / 0.7
-            y = p["y"] - 40 * S.ease_out_cubic(t)
+            y = p["y"] - SS.U(40) * S.ease_out_cubic(t)
             a = int(255 * (1 - S.smoothstep(max(0.0, (t - 0.5) / 0.5))))
             if a <= 0:
                 continue
@@ -594,7 +596,7 @@ class Game:
             if p["sub"]:
                 sub = cache.text(14, False, p["sub"], C.GREY)
                 sub.set_alpha(int(a * 0.8))
-                c.blit(sub, (p["x"] - sub.get_width() // 2, y + 12))
+                c.blit(sub, (p["x"] - sub.get_width() // 2, y + SS.U(12)))
 
     def _draw_countdown(self, c, now):
         current = None
@@ -610,64 +612,65 @@ class Game:
         alpha = int(255 * min(fade_in, fade_out))
         gold = word == "RYTHM!"
         col = C.GOLD if gold else C.CYAN
-        cx, cy = C.WIDTH // 2, C.HEIGHT // 2 - 40
+        cx, cy = C.WIDTH // 2, C.HEIGHT // 2 - SS.U(40)
 
         if gold:
-            ring_r = int(30 + 260 * S.ease_out_cubic(k / 500.0))
+            ring_r = int(SS.U(30) + SS.U(260) * S.ease_out_cubic(k / 500.0))
             ring_a = 1 - S.clamp(k / 500.0)
             if ring_r > 0 and ring_a > 0:
-                pygame.draw.circle(c, _mix(C.BG_DARK, C.GOLD, ring_a), (cx, cy), ring_r, 3)
+                pygame.draw.circle(c, _mix(C.BG_DARK, C.GOLD, ring_a), (cx, cy), ring_r, SS.U(3))
 
         surf = cache.text(cache.COUNTDOWN_SIZE, True, word, col)
         dx = dy = 0
         if k < 350 and random.random() < 0.4:
-            dx = random.randint(-6, 6)
-            dy = random.randint(-2, 2)
+            dx = random.randint(-SS.U(6), SS.U(6))
+            dy = random.randint(-SS.U(2), SS.U(2))
             ghost = cache.text(cache.COUNTDOWN_SIZE, True, word, C.CYAN)
             ghost.set_alpha(110)
-            c.blit(ghost, (cx - ghost.get_width() // 2 + dx + 4, cy - ghost.get_height() // 2 + dy))
+            c.blit(ghost, (cx - ghost.get_width() // 2 + dx + SS.U(4), cy - ghost.get_height() // 2 + dy))
         surf.set_alpha(alpha)
         c.blit(surf, (cx - surf.get_width() // 2 + dx, cy - surf.get_height() // 2 + dy))
 
     def _draw_hud(self, c, now):
+        u = SS.U
         prog = S.clamp(now / max(1, self.duration))
-        pygame.draw.rect(c, C.GRID_COL, (0, 0, C.WIDTH, 3))
+        pygame.draw.rect(c, C.GRID_COL, (0, 0, C.WIDTH, u(3)))
         if prog > 0:
-            pygame.draw.rect(c, C.CYAN, (0, 0, int(C.WIDTH * prog), 3))
+            pygame.draw.rect(c, C.CYAN, (0, 0, int(C.WIDTH * prog), u(3)))
 
-        c.blit(S.font(14, True).render("HP", True, C.GREY), (20, 14))
+        c.blit(S.font(14, True).render("HP", True, C.GREY), SS.UP(20, 14))
         for i in range(C.MAX_HP):
-            x = 60 + i * 26
+            x = u(60) + i * u(26)
             fill = S.clamp(self.hp_show - i)
-            pygame.draw.rect(c, (40, 40, 60), (x, 14, 20, 14), border_radius=3)
+            pygame.draw.rect(c, (40, 40, 60), (x, u(14), u(20), u(14)), border_radius=u(3))
             if fill > 0:
                 col = C.GREEN if self.hp > 2 else C.RED
-                pygame.draw.rect(c, col, (x, 14, int(20 * fill), 14), border_radius=3)
-            pygame.draw.rect(c, (60, 60, 80), (x, 14, 20, 14), 1, border_radius=3)
+                pygame.draw.rect(c, col, (x, u(14), int(u(20) * fill), u(14)), border_radius=u(3))
+            pygame.draw.rect(c, (60, 60, 80), (x, u(14), u(20), u(14)), 1, border_radius=u(3))
 
         score_txt = S.font(22, True).render(f"{int(self.score_show):06d}", True, C.GOLD)
-        c.blit(score_txt, (C.WIDTH - score_txt.get_width() - 20, 10))
+        c.blit(score_txt, (C.WIDTH - score_txt.get_width() - u(20), u(10)))
 
         judged = sum(self.counts.values())
         acc = 100.0 * sum(self.counts[g] * ACC_WEIGHT[g] for g in self.counts) / max(1, judged)
         acc_txt = S.font(14).render(f"{t('ТОЧНОСТЬ')} {acc:5.1f}%", True, C.GREY)
-        c.blit(acc_txt, (C.WIDTH - acc_txt.get_width() - 20, 42))
+        c.blit(acc_txt, (C.WIDTH - acc_txt.get_width() - u(20), u(42)))
 
         if self.combo >= 2:
-            size = 22 + int(6 * self.combo_pop)
+            size = u(22) + int(u(6) * self.combo_pop)
             combo_txt = S.font(size, True).render(f"COMBO x{self.combo}", True,
                                                   _lighten(C.PURPLE_LIGHT, 0.3 * self.combo_pop))
-            c.blit(combo_txt, (C.WIDTH // 2 - combo_txt.get_width() // 2, 60))
+            c.blit(combo_txt, (C.WIDTH // 2 - combo_txt.get_width() // 2, u(60)))
 
         hint = cache.text(14, False, t("ESC — пауза"), (90, 90, 120))
-        c.blit(hint, (C.WIDTH // 2 - hint.get_width() // 2, C.HEIGHT - 26))
+        c.blit(hint, (C.WIDTH // 2 - hint.get_width() // 2, C.HEIGHT - u(26)))
 
     def _draw_pause(self, mouse):
         scr = self._screen()
         scr.blit(self.veil, (0, 0))
-        S.glitch_title(scr, S.font(44, True), t("ПАУЗА"), C.CYAN, C.WIDTH // 2, 150,
+        S.glitch_title(scr, S.font(44, True), t("ПАУЗА"), C.CYAN, C.WIDTH // 2, SS.U(150),
                        self.frame % 200, length=40)
         self.resume_btn.draw(scr, mouse)
         self.menu_btn.draw(scr, mouse)
         S.blit_text(scr, S.font(14), t("P / ESC — продолжить, M — в меню"), C.GREY,
-                    C.WIDTH // 2, 446)
+                    C.WIDTH // 2, SS.U(446))

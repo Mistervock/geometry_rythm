@@ -5,6 +5,8 @@ import sys
 
 import pygame
 
+import screen_setting as SS
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if getattr(sys, "frozen", False):
     ROOT_DIR = os.path.dirname(os.path.abspath(sys.executable))
@@ -22,7 +24,7 @@ def root(*parts):
 
 TITLE = "Geometry Rhythm"
 VERSION = "0.2"
-WIDTH, HEIGHT = 1280, 720
+WIDTH, HEIGHT = SS.apply_name(SS.read_saved(root("data", "settings.json")))
 UI_FONT_SCALE = 1.2
 FPS = 60
 
@@ -44,13 +46,23 @@ LANE_LABELS = ("D", "F", "J", "K")
 LANE_COLORS = (CYAN, GREEN, PURPLE_LIGHT, GOLD)
 LANE_SHAPES = ("square", "triangle", "hexagon", "rhombus")
 
-LANE_W = 104
-LANE_GAP = 16
-FIELD_W = 4 * LANE_W + 3 * LANE_GAP
-FIELD_X = (WIDTH - FIELD_W) // 2
-HIT_Y = 600
+#-- Размеры поля: значения ниже расчётные (1280 × 720), в пиксели переводит screen_setting
+_D_LANE_W, _D_LANE_GAP, _D_HIT_Y, _D_TRAVEL_EXTRA = 104, 16, 600, 40
 SCROLL_MS = 900
-TRAVEL_PX = HIT_Y + 40
+
+
+def refresh_derived():
+    """Пересчитывает пиксельные размеры поля под текущий режим (вызывает screen_setting.set_mode)."""
+    global LANE_W, LANE_GAP, FIELD_W, FIELD_X, HIT_Y, TRAVEL_PX
+    LANE_W = SS.U(_D_LANE_W)
+    LANE_GAP = SS.U(_D_LANE_GAP)
+    FIELD_W = 4 * LANE_W + 3 * LANE_GAP
+    FIELD_X = (WIDTH - FIELD_W) // 2
+    HIT_Y = SS.U(_D_HIT_Y)
+    TRAVEL_PX = HIT_Y + SS.U(_D_TRAVEL_EXTRA)
+
+
+refresh_derived()
 
 WIN_PERFECT = 45
 WIN_GREAT = 90

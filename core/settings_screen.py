@@ -8,6 +8,8 @@ import audio
 import config as C
 import dialogs
 import display
+import cache
+import screen_setting as SS
 import settings
 import style as S
 from i18n import t
@@ -27,6 +29,7 @@ ROWS = (
     ("key2", "Клавиша дорожки 3", "key"),
     ("key3", "Клавиша дорожки 4", "key"),
     ("fullscreen", "Экран", "switch"),
+    ("resolution", "Разрешение", "res"),
     ("preview", "Предпрослушивание песен", "switch"),
     ("media_dim", "Затемнение картинок и роликов", "num"),
     ("lang", "Язык", "lang"),
@@ -40,6 +43,9 @@ def _value_text(kind_key, idx):
         return "Русский" if settings.get("lang") == "ru" else "English"
     if kind_key == "fullscreen":
         return t("На весь экран") if settings.get("fullscreen") else t("Оконно")
+    if kind_key == "resolution":
+        w, h = SS.size(SS.current())
+        return f"{w} × {h}"
     if kind_key == "preview":
         return t("Вкл") if settings.get("preview") else t("Выкл")
     if kind_key.startswith("key"):
@@ -154,14 +160,26 @@ def _panel_h():
 
 
 def _row_index(pos):
-    x, y = pos
-    if y < TOP or not (140 <= x <= C.WIDTH - 140):
+    x, y = pos[0] / SS.SCALE, pos[1] / SS.SCALE
+    if y < TOP or not (140 <= x <= SS.REF_W - 140):
         return None
     for i in range(len(ROWS)):
         top = _row_y(i)
         if top <= y < top + _row_h(i):
             return i
     return None
+
+
+def _cycle_resolution(direction):
+    names = SS.names()
+    i = names.index(SS.current()) if SS.current() in names else 0
+    name = names[(i + direction) % len(names)]
+    settings.set("resolution", name)
+    SS.set_mode(name)
+    display.apply()
+    cache.warm()
+    w, h = SS.size(name)
+    return f"{w} × {h}"
 
 
 def _toggle(key):
@@ -176,6 +194,8 @@ def _adjust(idx, direction):
     if kind == "switch":
         _toggle(key)
         return ""
+    if kind == "res":
+        return _cycle_resolution(direction)
     if kind != "num":
         return ""
     settings.step(key, direction)
@@ -188,6 +208,8 @@ def _activate(idx):
     key, _, kind = ROWS[idx]
     if key.startswith("key"):
         return "wait"
+    if kind == "res":
+        return _cycle_resolution(1)
     if kind == "switch":
         _toggle(key)
         return ""
@@ -205,6 +227,9 @@ def _reset(clock):
     if not dialogs.confirm(clock, t("Все настройки вернутся к значениям по умолчанию. Это нельзя отменить.")):
         return ""
     settings.reset()
+    SS.set_mode(settings.get("resolution"))
+    display.apply()
+    cache.warm()
     audio.set_music_volume()
     return t("Настройки сброшены")
 
@@ -213,35 +238,35 @@ def _draw(sel, waiting, toast, mouse, frame):
     scr = pygame.display.get_surface()
     scr.fill((0, 0, 0))
     S.draw_grid(scr, frame * 0.3, 0.0)
-    S.glitch_title(scr, S.font(36, True), t("НАСТРОЙКИ"), C.CYAN, C.WIDTH // 2, 56, frame)
-    area = pygame.Rect(120, TOP - 10, C.WIDTH - 240, _panel_h())
+    S.glitch_title(scr, S.font(36, True), t("НАСТРОЙКИ"), C.CYAN, C.WIDTH // 2, SS.U(56), frame)
+    area = pygame.Rect(SS.U(120), SS.U(TOP - 10), C.WIDTH - SS.U(240), SS.U(_panel_h()))
     S.panel(scr, area, C.CYAN, alpha=215)
     for i, (key, label, kind) in enumerate(ROWS):
-        y = _row_y(i)
-        h = _row_h(i)
-        row = pygame.Rect(140, y, C.WIDTH - 280, h - 4)
+        y = SS.U(_row_y(i))
+        h = SS.U(_row_h(i))
+        row = pygame.Rect(SS.U(140), y, C.WIDTH - SS.U(280), h - SS.U(4))
         active = i == sel
         if active:
-            pygame.draw.rect(scr, (34, 34, 68), row, border_radius=6)
-            pygame.draw.rect(scr, C.CYAN, row, 2, border_radius=6)
+            pygame.draw.rect(scr, (34, 34, 68), row, border_radius=SS.U(6))
+            pygame.draw.rect(scr, C.CYAN, row, SS.U(2), border_radius=SS.U(6))
         col = C.WHITE if active else (190, 190, 210)
         if kind == "action":
-            S.blit_text(scr, S.font(18, True), t(label), col, C.WIDTH // 2, y + (h - 4) // 2)
+            S.blit_text(scr, S.font(18, True), t(label), col, C.WIDTH // 2, y + (h - SS.U(4)) // 2)
             continue
-        scr.blit(S.font(18, True).render(t(label), True, col), (row.x + 16, row.y + 5))
+        scr.blit(S.font(18, True).render(t(label), True, col), (row.x + SS.U(16), row.y + SS.U(5)))
         if kind == "num":
             val = _value_text(key, i)
             vt = S.font(18, True).render(f"<  {val}  >", True, C.GOLD if active else C.GREY)
-            scr.blit(vt, (row.right - vt.get_width() - 16, row.y + 5))
+            scr.blit(vt, (row.right - vt.get_width() - SS.U(16), row.y + SS.U(5)))
         else:
             if kind == "key" and waiting is not None and int(key[3]) == waiting:
                 val, vcol = "...", C.RED_LIGHT
             else:
                 val, vcol = _value_text(key, i), C.GOLD
             vt = S.font(18, True).render(val, True, vcol)
-            scr.blit(vt, (row.right - vt.get_width() - 16, row.y + 5))
+            scr.blit(vt, (row.right - vt.get_width() - SS.U(16), row.y + SS.U(5)))
     S.blit_text(scr, S.font(14), t("← → изменить · ENTER выбрать · ESC назад"), C.GREY,
-                C.WIDTH // 2, C.HEIGHT - 16)
+                C.WIDTH // 2, C.HEIGHT - SS.U(16))
     if toast:
-        S.blit_text(scr, S.font(16, True), toast, C.GOLD, C.WIDTH // 2, C.HEIGHT - 40)
+        S.blit_text(scr, S.font(16, True), toast, C.GOLD, C.WIDTH // 2, C.HEIGHT - SS.U(40))
     S.post_fx(scr, frame, grain=40)

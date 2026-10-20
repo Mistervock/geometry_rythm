@@ -8,6 +8,7 @@ import pygame
 import config as C
 import display
 import records
+import screen_setting as SS
 import style as S
 from i18n import t
 
@@ -15,19 +16,19 @@ ITEMS = (("songs", "ПЕСНИ"), ("records", "РЕКОРДЫ"), ("achievements"
          ("settings", "НАСТРОЙКИ"), ("quit", "ВЫХОД"))
 BEAT_MS = 500
 BETA_ANGLE = 8
-_beta_img = None
+_beta_cache = {}
 
 
 def _beta_surface():
-    global _beta_img
-    if _beta_img is None:
+    if SS.SCALE not in _beta_cache:
         label = S.font(14, True).render("BETA", True, C.GOLD)
-        w, h = label.get_width() + 12, label.get_height() + 6
-        _beta_img = pygame.Surface((w, h), pygame.SRCALPHA)
-        pygame.draw.rect(_beta_img, (10, 10, 25, 230), (0, 0, w, h), border_radius=5)
-        pygame.draw.rect(_beta_img, C.GOLD, (0, 0, w, h), 2, border_radius=5)
-        _beta_img.blit(label, (6, 3))
-    return _beta_img
+        w, h = label.get_width() + SS.U(12), label.get_height() + SS.U(6)
+        img = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(img, (10, 10, 25, 230), (0, 0, w, h), border_radius=SS.U(5))
+        pygame.draw.rect(img, C.GOLD, (0, 0, w, h), SS.U(2), border_radius=SS.U(5))
+        img.blit(label, SS.UP(6, 3))
+        _beta_cache[SS.SCALE] = img
+    return _beta_cache[SS.SCALE]
 
 
 def _draw_beta(scr, n):
@@ -36,8 +37,8 @@ def _draw_beta(scr, n):
     pulse = (1.0 - phase) ** 3
     img = pygame.transform.rotozoom(_beta_surface(), BETA_ANGLE, 1.0 + 0.22 * pulse)
     img.set_alpha(int(255 * S.smoothstep(min(1.0, (n - 12) / 20))))
-    cx = C.WIDTH // 2 + title_w // 2 - 4
-    cy = 170 + title_h // 2 + 4
+    cx = C.WIDTH // 2 + title_w // 2 - SS.U(4)
+    cy = SS.U(170) + title_h // 2 + SS.U(4)
     scr.blit(img, img.get_rect(center=(cx, cy)))
 
 
@@ -57,7 +58,7 @@ def _draw_background(scr, n):
 def main_menu(clock):
     buttons = []
     for i, (action, label) in enumerate(ITEMS):
-        rect = pygame.Rect(C.WIDTH // 2 - 130, 296 + i * 58, 260, 44)
+        rect = pygame.Rect(C.WIDTH // 2 - SS.U(130), SS.U(296 + i * 58), SS.U(260), SS.U(44))
         buttons.append((action, S.Btn(rect, t(label), C.CYAN, S.font(18, True))))
     selected = 0
     n = 0
@@ -90,19 +91,19 @@ def main_menu(clock):
         _draw_background(scr, n)
 
         for i in range(4):
-            cx = C.FIELD_X + C.FIELD_W // 2 + (i - 1.5) * 70
-            cy = 92 + math.sin(n * 0.04 + i * 1.3) * 6
+            cx = C.FIELD_X + C.FIELD_W // 2 + (i - 1.5) * SS.U(70)
+            cy = SS.U(92) + math.sin(n * 0.04 + i * 1.3) * SS.U(6)
             rot = n * 0.6 + i * 25
-            S.draw_shape(scr, C.LANE_SHAPES[i], cx, cy, 16, C.LANE_COLORS[i], 255, rot=rot)
+            S.draw_shape(scr, C.LANE_SHAPES[i], cx, cy, SS.U(16), C.LANE_COLORS[i], 255, rot=rot)
 
         glitch_k = n - 10
         S.glitch_title(scr, S.font(44, True), "GEOMETRY RHYTHM", C.WHITE,
-                       C.WIDTH // 2, 170, glitch_k)
+                       C.WIDTH // 2, SS.U(170), glitch_k)
         if n >= 12:
             _draw_beta(scr, n)
         if n >= 40:
             S.blit_text(scr, S.font(14), f"D  F  J  K  —  {t('дорожки')}   ·   V{C.VERSION}",
-                        C.GREY, C.WIDTH // 2, 214, 255 * S.smoothstep((n - 40) / 30))
+                        C.GREY, C.WIDTH // 2, SS.U(214), 255 * S.smoothstep((n - 40) / 30))
 
         for i, (action, btn) in enumerate(buttons):
             if n >= 60 + i * 10:
@@ -111,7 +112,7 @@ def main_menu(clock):
         if n >= 120:
             S.blit_text(scr, S.font(14), t("Developer: Mistervock · ПЕСНИ: свои .ogg/.mp3 в папке songs/"),
                         (90, 90, 120),
-                        C.WIDTH // 2, C.HEIGHT - 24)
+                        C.WIDTH // 2, C.HEIGHT - SS.U(24))
 
         S.post_fx(scr, n, grain=45)
         pygame.display.flip()
@@ -119,7 +120,7 @@ def main_menu(clock):
 
 
 def records_screen(clock):
-    back = S.Btn((C.WIDTH // 2 - 130, 520, 260, 44), t("НАЗАД"), C.PURPLE_LIGHT, S.font(18, True))
+    back = S.Btn((C.WIDTH // 2 - SS.U(130), SS.U(520), SS.U(260), SS.U(44)), t("НАЗАД"), C.PURPLE_LIGHT, S.font(18, True))
     entries = records.load()
     n = 0
     while True:
@@ -137,14 +138,14 @@ def records_screen(clock):
 
         scr = pygame.display.get_surface()
         _draw_background(scr, n)
-        S.glitch_title(scr, S.font(36, True), t("РЕКОРДЫ"), C.GOLD, C.WIDTH // 2, 60, n - 5)
+        S.glitch_title(scr, S.font(36, True), t("РЕКОРДЫ"), C.GOLD, C.WIDTH // 2, SS.U(60), n - 5)
 
-        area = pygame.Rect(C.WIDTH // 2 - 280, 110, 560, 390)
+        area = pygame.Rect(C.WIDTH // 2 - SS.U(280), SS.U(110), SS.U(560), SS.U(390))
         S.panel(scr, area, C.GOLD, alpha=215)
         head = S.font(14, True).render(
             f"{'#':<4}{t('ИМЯ'):<14}{t('ОЧКИ'):>8}{t('ТОЧН.'):>9}{t('ОЦЕНКА'):>9}{t('ДАТА'):>13}",
             True, C.GOLD)
-        scr.blit(head, (area.x + 22, area.y + 18))
+        scr.blit(head, (area.x + SS.U(22), area.y + SS.U(18)))
         if not entries:
             S.blit_text(scr, S.font(18), t("пока пусто — сыграй первый забег"), C.GREY,
                         C.WIDTH // 2, area.centery)
@@ -158,7 +159,7 @@ def records_screen(clock):
                     f"{e['acc']:>8.1f}%{e['grade']:>9}{e['date']:>13}")
             surf = S.font(14).render(line, True, col)
             surf.set_alpha(int(min(255, ka * 255 / 12)))
-            scr.blit(surf, (area.x + 22, area.y + 50 + idx * 32))
+            scr.blit(surf, (area.x + SS.U(22), area.y + SS.U(50 + idx * 32)))
 
         back.draw(scr, mouse)
         S.post_fx(scr, n, grain=45)

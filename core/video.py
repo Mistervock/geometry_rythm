@@ -135,6 +135,12 @@ def _player(path, key):
     return p
 
 
+def prepare(path, key):
+    """Открывает ролик заранее (в фоне): первый показ без задержки."""
+    if AVAILABLE:
+        _player(path, key)
+
+
 def frame(path, key, ms, w, h, bright=1.0):
     if not AVAILABLE:
         return None
