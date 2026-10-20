@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>A geometric rhythm game inspired by Friday Night Funkin' and Geometry Catcher.</strong><br>
-  <a href="#english">English</a> · <a href="#русский">Русский</a>
+  <a href="#english">English</a> · <a href="#русский">Русский</a> · <a href="https://github.com/Mistervock/geometry_rythm/releases">Releases / Скачать</a>
 </p>
 
 <p align="center">
@@ -223,8 +223,6 @@ For a heal event, **lane** is numbered from **1** to **4** (matching the gamepla
 geometry_rythm/
 ├── main.py                     # Application entry point
 ├── requirements.txt            # Python dependencies
-├── build_exe.bat               # Windows executable build script
-├── GeometryRhythm.spec         # PyInstaller build specification
 ├── core/
 │   ├── game.py                 # Gameplay, scoring, health, and event playback
 │   ├── chart.py                # Notes, chart metadata, JSON loading/saving
@@ -251,9 +249,9 @@ Local generated data includes **data/charts/** for charts, **data/songmeta/** fo
 
 ### Windows executable
 
-A prebuilt Windows **.exe** is not currently published in GitHub Releases. You can build one locally by running **build_exe.bat** from the project folder on Windows. The script installs the listed dependencies and PyInstaller, then creates **dist/GeometryRhythm.exe**. After a build, place the executable beside the **songs/**, **data/**, and **images/** folders so it can access your music, charts, settings, and media.
+Check the [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases) for downloadable Windows builds. If a release includes **GeometryRhythm.exe** or an archive, download it from the release **Assets** and follow the release notes. Unless the package specifies another layout, keep the executable beside the **songs/**, **data/**, and **images/** folders so the game can access your music, charts, settings, and media.
 
-**Note:** the batch script removes the **build/** directory and **GeometryRhythm.spec** at the end of its run. Back up the spec file first if you want to keep it.
+If no packaged build is available, run the game from source using the instructions above. The current repository version no longer includes **build_exe.bat** or **GeometryRhythm.spec**, so it does not provide a maintained one-click EXE build script.
 
 ---
 
@@ -469,8 +467,6 @@ python main.py
 geometry_rythm/
 ├── main.py                     # Точка входа в приложение
 ├── requirements.txt            # Зависимости Python
-├── build_exe.bat               # Скрипт сборки Windows .exe
-├── GeometryRhythm.spec         # Конфигурация сборки PyInstaller
 ├── core/
 │   ├── game.py                 # Игровой процесс, счёт, здоровье и события
 │   ├── chart.py                # Ноты, метаданные и JSON-чарты
@@ -497,6 +493,6 @@ geometry_rythm/
 
 ### Windows-версия (.exe)
 
-Готовый для скачивания файл Windows **.exe** пока не опубликован в GitHub Releases. Собрать его локально можно запуском **build_exe.bat** из папки проекта в Windows. Скрипт установит зависимости и PyInstaller, затем создаст **dist/GeometryRhythm.exe**. После сборки положи исполняемый файл рядом с папками **songs/**, **data/** и **images/**, чтобы игра могла читать музыку, чарты, настройки и медиа.
+Проверь [страницу GitHub Releases](https://github.com/Mistervock/geometry_rythm/releases): готовые Windows-сборки, если они опубликованы, находятся в разделе **Assets** соответствующего релиза. Скачай EXE или архив и следуй инструкциям в описании релиза. Если в пакете не указано иное, размести исполняемый файл рядом с папками **songs/**, **data/** и **images/**, чтобы игра могла читать музыку, чарты, настройки и медиа.
 
-**Важно:** в конце скрипт удаляет папку **build/** и файл **GeometryRhythm.spec**. Если хочешь сохранить файл спецификации, заранее сделай его копию.
+Если готовой сборки нет, запусти игру из исходников по инструкции выше. В текущей версии репозитория больше нет файлов **build_exe.bat** и **GeometryRhythm.spec**, поэтому проект сейчас не содержит поддерживаемого скрипта для сборки EXE в один клик.
