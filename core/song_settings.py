@@ -8,6 +8,7 @@ import pygame
 import achievements
 import config as C
 import display
+import events as EV
 import screen_setting as SS
 import songs
 import style as S
@@ -23,11 +24,14 @@ LABELS = (
     ("charter", "Кто делал чарт"),
     ("difficulty", "Сложность (звёзды)"),
     ("achievement", "Ачивка за победу"),
+    ("image", "Картинка песни"),
 )
 TEXT_LIMITS = {"title": 60, "artist": 60, "charter": 40}
 DIFF_ROW = 3
 ACH_ROW = 4
-PANEL_H = 422
+IMG_ROW = 5
+CYCLE_ROWS = {ACH_ROW: "achievement", IMG_ROW: "image"}
+PANEL_H = 494
 STAR_R = 16
 STAR_GAP = 46
 
@@ -51,18 +55,22 @@ def _set_diff(vals, value):
     vals["difficulty"] = max(1, min(5, value))
 
 
-def _ach_choices():
-    """Варианты ачивки: сначала «без ачивки», затем файлы из achievements/."""
+def _options(key):
+    """Варианты для строки с выбором: (имя файла, данные или None). Первый — пусто («нет»)."""
     out = [("", None)]
-    for path, data in achievements.list_all():
-        out.append((os.path.basename(path), data))
+    if key == "achievement":
+        for path, data in achievements.list_all():
+            out.append((os.path.basename(path), data))
+    elif key == "image":
+        for name in EV.list_media("image"):
+            out.append((name, None))
     return out
 
 
-def _cycle_ach(vals, choices, step):
-    names = [name for name, _ in choices]
-    cur = names.index(vals["achievement"]) if vals["achievement"] in names else 0
-    vals["achievement"] = names[(cur + step) % len(names)]
+def _cycle(vals, key, options, step):
+    names = [name for name, _ in options]
+    cur = names.index(vals[key]) if vals[key] in names else 0
+    vals[key] = names[(cur + step) % len(names)]
 
 
 #-- Цикл
@@ -72,13 +80,12 @@ def run(clock, chart):
     meta = songs.meta(chart.song)
     orig = {"title": meta.get("title", ""), "artist": meta.get("artist", ""),
             "charter": chart.charter, "difficulty": chart.difficulty}
-    choices = _ach_choices()
-    names = [name for name, _ in choices]
-    # ачивка, которой уже нет в папке, показывается как «нет»
-    orig["achievement"] = chart.achievement if chart.achievement in names else ""
+    opts = {key: _options(key) for key in CYCLE_ROWS.values()}
+    orig["achievement"] = chart.achievement if chart.achievement in [n for n, _ in opts["achievement"]] else ""
+    orig["image"] = meta.get("image", "") if meta.get("image", "") in [n for n, _ in opts["image"]] else ""
     vals = dict(orig)
     sel, edit, buf, frame = 0, None, "", 0
-    done = S.Btn((C.WIDTH // 2 - SS.U(90), SS.U(556), SS.U(180), SS.U(40)), t("ГОТОВО"), C.CYAN, S.font(16, True))
+    done = S.Btn((C.WIDTH // 2 - SS.U(90), SS.U(628), SS.U(180), SS.U(40)), t("ГОТОВО"), C.CYAN, S.font(16, True))
 
     def finish():
         _commit(vals, edit, buf)
@@ -86,7 +93,7 @@ def run(clock, chart):
         chart.difficulty = vals["difficulty"]
         chart.achievement = vals["achievement"]
         if vals != orig:
-            songs.save_meta(chart.song, {"title": vals["title"], "artist": vals["artist"]})
+            songs.update_meta(chart.song, title=vals["title"], artist=vals["artist"], image=vals["image"])
         return vals != orig
 
     while True:
@@ -121,11 +128,12 @@ def run(clock, chart):
                     sel = (sel - 1) % len(LABELS)
                 elif ev.key in (pygame.K_DOWN, pygame.K_TAB):
                     sel = (sel + 1) % len(LABELS)
-                elif sel == ACH_ROW:
+                elif sel in CYCLE_ROWS:
+                    key = CYCLE_ROWS[sel]
                     if ev.key in (pygame.K_LEFT, pygame.K_a):
-                        _cycle_ach(vals, choices, -1)
+                        _cycle(vals, key, opts[key], -1)
                     elif ev.key in (pygame.K_RIGHT, pygame.K_d, pygame.K_RETURN, pygame.K_KP_ENTER):
-                        _cycle_ach(vals, choices, 1)
+                        _cycle(vals, key, opts[key], 1)
                 elif sel == DIFF_ROW:
                     if ev.key in (pygame.K_LEFT, pygame.K_a):
                         _set_diff(vals, vals["difficulty"] - 1)
@@ -144,9 +152,10 @@ def run(clock, chart):
                     return finish()
                 _commit(vals, edit, buf)
                 edit = None
-                if _box(ACH_ROW).collidepoint(ev.pos):
-                    sel = ACH_ROW
-                    _cycle_ach(vals, choices, 1)
+                cyc = [r for r in CYCLE_ROWS if _box(r).collidepoint(ev.pos)]
+                if cyc:
+                    sel = cyc[0]
+                    _cycle(vals, CYCLE_ROWS[sel], opts[CYCLE_ROWS[sel]], 1)
                     continue
                 for i in range(DIFF_ROW):
                     if _box(i).collidepoint(ev.pos):
@@ -163,13 +172,13 @@ def run(clock, chart):
                     else:
                         if _box(DIFF_ROW).collidepoint(ev.pos):
                             sel = DIFF_ROW
-        _draw(chart, sel, edit, buf, vals, done, mouse, frame, choices)
-        pygame.display.flip()
+        _draw(chart, sel, edit, buf, vals, done, mouse, frame, opts)
+        display.flip()
 
 
 #-- Отрисовка
 
-def _draw(chart, sel, edit, buf, vals, done, mouse, frame, choices):
+def _draw(chart, sel, edit, buf, vals, done, mouse, frame, opts):
     scr = pygame.display.get_surface()
     scr.fill((0, 0, 0))
     S.draw_grid(scr, frame * 0.3, 0.0)
@@ -189,10 +198,13 @@ def _draw(chart, sel, edit, buf, vals, done, mouse, frame, choices):
                 S.draw_star(scr, cx, cy, SS.U(STAR_R), C.GOLD if k < vals["difficulty"] else C.DIM,
                             filled=k < vals["difficulty"])
             continue
-        if key == "achievement":
-            title = dict(choices).get(vals[key])
-            text = title["name"] if title else t("нет")
-            col = C.WHITE if title else C.DIM
+        if key in CYCLE_ROWS.values():
+            if key == "achievement":
+                found = dict(opts[key]).get(vals[key])
+                text = found["name"] if found else (t("нет") if not vals[key] else vals[key])
+            else:
+                text = vals[key] or t("нет")
+            col = C.WHITE if vals[key] else C.DIM
             fnt = S.font(18, True)
             scr.blit(fnt.render(text, True, col), (box.x + SS.U(12), box.centery - fnt.get_height() // 2))
             continue

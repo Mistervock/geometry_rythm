@@ -5,6 +5,7 @@ import pygame
 
 import config as C
 import display
+import keymap
 import screen_setting as SS
 import style as S
 from i18n import t
@@ -33,7 +34,7 @@ def _begin_frame(snap, frame, box, accent):
 
 def _end_frame(scr, frame):
     S.post_fx(scr, frame, grain=30)
-    pygame.display.flip()
+    display.flip()
 
 
 def _wrap(fnt, text, width):
@@ -165,13 +166,13 @@ def choose(clock, title, options):
                 pygame.quit()
                 sys.exit()
             if ev.type == pygame.KEYDOWN:
-                if ev.key == pygame.K_ESCAPE:
+                if keymap.hit("back", ev.key):
                     return None
-                if ev.key in (pygame.K_UP, pygame.K_w):
+                if keymap.hit("up", ev.key):
                     sel = max(0, sel - 1)
-                elif ev.key in (pygame.K_DOWN, pygame.K_s):
+                elif keymap.hit("down", ev.key):
                     sel = min(len(options) - 1, sel + 1)
-                elif ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                elif keymap.hit("confirm", ev.key) and ev.key != pygame.K_SPACE:
                     return sel
             elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
                 for i, btn in enumerate(buttons):

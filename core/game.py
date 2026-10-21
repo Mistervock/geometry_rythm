@@ -128,7 +128,7 @@ class Game:
             self._draw(mouse)
             if self.finished:
                 return self.result()
-            pygame.display.flip()
+            display.flip()
             self.frame += 1
 
     def result(self):

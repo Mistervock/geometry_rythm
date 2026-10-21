@@ -77,6 +77,9 @@ def find(file_name):
         return None
 
 
+_unlocked_cache = (None, set())
+
+
 def _read_unlocked():
     try:
         with open(UNLOCKED_PATH, "r", encoding="utf-8") as f:
@@ -86,8 +89,20 @@ def _read_unlocked():
         return set()
 
 
+def unlocked_names():
+    """Множество полученных ачивок. Файл перечитывается только когда он изменился (вызывается из кадра)."""
+    global _unlocked_cache
+    try:
+        stamp = os.path.getmtime(UNLOCKED_PATH)
+    except OSError:
+        stamp = None
+    if _unlocked_cache[0] != stamp:
+        _unlocked_cache = (stamp, _read_unlocked() if stamp is not None else set())
+    return _unlocked_cache[1]
+
+
 def is_unlocked(file_name):
-    return file_name in _read_unlocked()
+    return file_name in unlocked_names()
 
 
 def unlock(file_name):

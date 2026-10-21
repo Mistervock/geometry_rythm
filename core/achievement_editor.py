@@ -1,5 +1,6 @@
 
 #-- Импорт
+import os
 import sys
 
 import pygame
@@ -141,7 +142,7 @@ def run(clock):
         else:
             _draw_list(items, sel, top, btn_new, btn_edit, btn_del, btn_back, mouse, n,
                        toast if toast_left > 0 else "")
-        pygame.display.flip()
+        display.flip()
         n += 1
 
 
@@ -209,7 +210,8 @@ def _draw_list(items, sel, top, btn_new, btn_edit, btn_del, btn_back, mouse, n, 
         if idx >= len(items):
             break
         V.draw_row(scr, pygame.Rect(SS.U(140), SS.U(110 + i * ROW), C.WIDTH - SS.U(280), SS.U(ROW - 8)),
-                   items[idx][1], idx == sel)
+                   items[idx][1], idx == sel,
+                       achievements.is_unlocked(os.path.basename(items[idx][0])))
     V.draw_detail(scr, pygame.Rect(SS.U(120), SS.U(500), C.WIDTH - SS.U(240), SS.U(110)),
                   items[sel][1] if items else None)
     for btn in (btn_new, btn_edit, btn_del, btn_back):

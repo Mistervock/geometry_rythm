@@ -658,7 +658,7 @@ class EventsScreen:
                     return
             self._tick_hold()
             self._draw(mouse)
-            pygame.display.flip()
+            display.flip()
             self.frame += 1
 
     def _event(self, ev):

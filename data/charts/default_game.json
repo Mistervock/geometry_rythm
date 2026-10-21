@@ -2,6 +2,8 @@
  "version": 4,
  "song": "game.ogg",
  "name": "Чарт",
+ "charter": "Mistervock",
+ "difficulty": 3,
  "notes": [
   {
    "t": 3768,
@@ -2468,12 +2470,16 @@
   {
    "type": "flash",
    "t": 26967,
+   "folder": "",
+   "locked": false,
    "attack": 40,
    "dur": 300
   },
   {
    "type": "bg",
    "t": 41600,
+   "folder": "",
+   "locked": false,
    "r": 0,
    "g": 0,
    "b": 0,
@@ -2483,6 +2489,8 @@
   {
    "type": "bg",
    "t": 44214,
+   "folder": "",
+   "locked": false,
    "r": 255,
    "g": 255,
    "b": 255,
@@ -2492,6 +2500,8 @@
   {
    "type": "bg",
    "t": 44601,
+   "folder": "",
+   "locked": false,
    "r": 10,
    "g": 10,
    "b": 20,
@@ -2501,6 +2511,8 @@
   {
    "type": "bg",
    "t": 45152,
+   "folder": "",
+   "locked": false,
    "r": 82,
    "g": 0,
    "b": 0,
@@ -2510,6 +2522,8 @@
   {
    "type": "bg",
    "t": 45646,
+   "folder": "",
+   "locked": false,
    "r": 10,
    "g": 10,
    "b": 20,
@@ -2519,6 +2533,8 @@
   {
    "type": "bg",
    "t": 46090,
+   "folder": "",
+   "locked": false,
    "r": 82,
    "g": 0,
    "b": 0,
@@ -2528,6 +2544,8 @@
   {
    "type": "bg",
    "t": 46639,
+   "folder": "",
+   "locked": false,
    "r": 10,
    "g": 0,
    "b": 20,
@@ -2537,18 +2555,24 @@
   {
    "type": "glitch",
    "t": 84547,
+   "folder": "",
+   "locked": false,
    "dur": 1000,
    "strength": 80
   },
   {
    "type": "glitch",
    "t": 92249,
+   "folder": "",
+   "locked": false,
    "dur": 1000,
    "strength": 100
   },
   {
    "type": "video",
    "t": 94160,
+   "folder": "",
+   "locked": false,
    "dur": 56900,
    "w": 800,
    "h": 450,
@@ -2563,36 +2587,48 @@
   {
    "type": "flash",
    "t": 94178,
+   "folder": "",
+   "locked": false,
    "attack": 40,
    "dur": 500
   },
   {
    "type": "flash",
    "t": 96219,
+   "folder": "",
+   "locked": false,
    "attack": 40,
    "dur": 500
   },
   {
    "type": "flash",
    "t": 98027,
+   "folder": "",
+   "locked": false,
    "attack": 40,
    "dur": 500
   },
   {
    "type": "flash",
    "t": 102045,
+   "folder": "",
+   "locked": false,
    "attack": 40,
    "dur": 500
   },
   {
    "type": "glitch",
    "t": 105615,
+   "folder": "",
+   "locked": false,
    "dur": 900,
    "strength": 100
   },
   {
    "type": "image",
    "t": 105615,
+   "folder": "",
+   "locked": false,
    "dur": 3000,
    "w": 480,
    "x": 0,

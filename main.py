@@ -23,6 +23,14 @@ def play_chart(clock, chart, first):
         outcome = Game(clock, chart).run()
         if outcome["action"] == "menu":
             return
+        if not outcome["failed"]:
+            import songs
+            songs.mark_win(chart)
+            fresh_best, prev = songs.record_rank(chart, outcome["grade"], outcome["acc"], outcome["score"])
+            best = songs.chart_best(chart)
+            outcome["rank"] = {"grade": outcome["grade"], "best": best["grade"] if best else outcome["grade"],
+                               "new": fresh_best, "prev": prev,
+                               "song": songs.song_rank(chart.song)}
         if not outcome["failed"] and chart.achievement:
             import achievements
             ach = achievements.find(chart.achievement)

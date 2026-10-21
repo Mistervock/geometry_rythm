@@ -1,5 +1,6 @@
 
 #-- Импорт
+import os
 import sys
 import time
 
@@ -9,6 +10,8 @@ import audio
 import autochart
 import cache
 import config as C
+import dialogs
+import keymap
 import display
 import events
 import events_screen
@@ -25,6 +28,38 @@ SNAPS = (10, 25, 50, 100, 200)
 ZOOMS = (0.25, 0.35, 0.5, 0.7, 1.0)
 SPEEDS = (0.5, 0.75, 1.0, 1.25)
 BAR_H = 12
+AUTOSAVE_SEC = 60
+
+
+def help_lines():
+    """Строки подсказки F1 по текущим привязкам клавиш."""
+    k = keymap.label
+
+    def pair(a, b):
+        return f"{k(a)} {k(b)}"
+
+    lane = " ".join(settings.key_label(n).upper() for n in settings.get("lane_keys"))
+    return [
+        (keymap.labels("play"), "играть / пауза"),
+        (lane, "поставить ноту на дорожку"),
+        (pair("seek_left", "seek_right"), "курсор"),
+        (pair("zoom_in", "zoom_out"), "масштаб"),
+        (pair("to_start", "to_end"), "начало / конец"),
+        (pair("back5", "fwd5"), "±5 с"),
+        (pair("speed_down", "speed_up"), "скорость"),
+        (pair("shift_left", "shift_right"), "сдвиг нот ±10 мс"),
+        (k("snap"), "сетка"),
+        (k("fx"), "эффекты вкл / выкл"),
+        (keymap.labels("delete_note"), "удалить ноту"),
+        ("Ctrl+" + k("save"), "сохранить"),
+        ("Ctrl+" + k("undo"), "отмена"),
+        (k("rename"), "название чарта"),
+        (k("menu"), "меню"),
+        ("F1", "эта подсказка"),
+        ("F3", "показать FPS"),
+    ]
+
+
 PANEL_X = 940
 UNDO_LIMIT = 80
 MAX_HOLD = 10000
@@ -67,6 +102,8 @@ class Editor:
         self.menu_open = False
         self.menu_sel = 0
         self.frame = 0
+        self.help_open = False
+        self.last_autosave = time.perf_counter()
         self.veil = pygame.Surface((C.WIDTH, C.HEIGHT), pygame.SRCALPHA)
         self.white = pygame.Surface((C.WIDTH, C.HEIGHT))
         self.white.fill(C.WHITE)
@@ -170,7 +207,7 @@ class Editor:
         if self.speed != 1.0:
             self._toast(t("Готовлю замедление…") if self.speed < 1 else t("Готовлю ускорение…"), 60)
             self._draw((0, 0))
-            pygame.display.flip()
+            display.flip()
         self._audio_path()
         if self.playing:
             self._start_audio(self.cursor)
@@ -211,10 +248,15 @@ class Editor:
         if not autochart.AVAILABLE:
             self._toast(t("Авто-разметка недоступна: установите numpy"))
             return
+        choice = dialogs.choose(self.clock, t("Плотность авто-разметки"),
+                                [t("Лёгкая (мало нот)"), t("Средняя"), t("Сложная (много нот)"), t("Отмена")])
+        if choice is None or choice == 3:
+            return
+        preset = ("easy", "normal", "hard")[choice]
         self._toast(t("Анализ песни…"), 60)
         self._draw((0, 0))
-        pygame.display.flip()
-        res = autochart.build(self.song_path)
+        display.flip()
+        res = autochart.build(self.song_path, preset)
         if res is None:
             self._toast(t("Не удалось проанализировать песню"))
             return
@@ -243,10 +285,12 @@ class Editor:
                   ("save_exit", t("СОХРАНИТЬ И ВЫЙТИ")),
                   ("song", t("НАСТРОЙКИ ПЕСНИ")),
                   ("achievements", t("ДОСТИЖЕНИЯ")),
+                  ("export", t("ЭКСПОРТ ЧАРТА")),
+                  ("import", t("ИМПОРТ ЧАРТА")),
                   ("auto", t("АВТО-РАЗМЕТКА (ЗАМЕНИТ НОТЫ)")),
                   ("exit", t("ВЫЙТИ БЕЗ СОХРАНЕНИЯ"))]
         self.menu_items = labels
-        self.menu_btns = [S.Btn(SS.UR(SS.REF_W // 2 - 210, 176 + i * 62, 420, 50), text, C.CYAN,
+        self.menu_btns = [S.Btn(SS.UR(SS.REF_W // 2 - 210, 150 + i * 56, 420, 46), text, C.CYAN,
                                 S.font(16, True)) for i, (_, text) in enumerate(labels)]
 
     def _menu_action(self, action):
@@ -269,6 +313,13 @@ class Editor:
         elif action == "auto":
             self.menu_open = False
             self._auto()
+        elif action == "export":
+            self.menu_open = False
+            path = songs.export_chart(self.chart)
+            self._toast(f"{t('Экспортировано')}: {os.path.relpath(path, C.ROOT_DIR)}", 4)
+        elif action == "import":
+            self.menu_open = False
+            self._import()
         elif action == "exit":
             if self.dirty and not self.confirm_exit:
                 self.confirm_exit = True
@@ -276,6 +327,31 @@ class Editor:
             else:
                 return "back"
         return None
+
+    def _import(self):
+        files = songs.export_files()
+        if not files:
+            self._toast(t("В папке exports/ нет файлов для импорта"), 3)
+            return
+        idx = dialogs.choose(self.clock, t("Импорт чарта из exports/"), files[:8])
+        if idx is None:
+            return
+        try:
+            ch = songs.import_chart(files[idx])
+        except ValueError as e:
+            reason = {"no_song": t("песня из чарта не найдена в songs/")}.get(str(e), t("файл не читается"))
+            self._toast(f"{t('Импорт не удался')}: {reason}", 4)
+            return
+        self._toast(f"{t('Импортирован')}: {ch.name} — {t('откройте его из списка песен')}", 4)
+
+    def _maybe_autosave(self):
+        if not self.dirty or self.playing:
+            return
+        if time.perf_counter() - self.last_autosave < AUTOSAVE_SEC:
+            return
+        self.last_autosave = time.perf_counter()
+        songs.autosave_chart(self.chart)
+        self._toast(t("Автосохранение"), 1.5)
 
     #-- Цикл
 
@@ -293,8 +369,9 @@ class Editor:
                     self._stop_play()
                     return res
             self._tick(dt)
+            self._maybe_autosave()
             self._draw(mouse)
-            pygame.display.flip()
+            display.flip()
             self.frame += 1
 
     def _tick(self, dt):
@@ -382,7 +459,7 @@ class Editor:
         ctrl = mods & pygame.KMOD_CTRL
 
         if self.name_edit:
-            if k in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_F2):
+            if k in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE) or keymap.hit("rename", k):
                 self.chart.name = (self.name_buf.strip() or "Чарт")[:24]
                 self.name_edit = False
                 self.dirty = True
@@ -392,65 +469,73 @@ class Editor:
                 self.name_buf += ev.unicode
             return None
 
+        if self.help_open:
+            self.help_open = False
+            return None
+        if k == pygame.K_F1:
+            self.help_open = True
+            return None
+
         if self.menu_open:
-            if k == pygame.K_ESCAPE:
+            if keymap.hit("back", k):
                 self.menu_open = False
-            elif k in (pygame.K_UP, pygame.K_w):
+            elif keymap.hit("up", k):
                 self.menu_sel = (self.menu_sel - 1) % len(self.menu_items)
-            elif k in (pygame.K_DOWN, pygame.K_s):
+            elif keymap.hit("down", k):
                 self.menu_sel = (self.menu_sel + 1) % len(self.menu_items)
-            elif k in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+            elif keymap.hit("confirm", k):
                 return self._menu_action(self.menu_items[self.menu_sel][0])
             return None
 
-        if k == pygame.K_ESCAPE:
+        if keymap.hit("menu", k):
             self.menu_open = True
             self.menu_sel = 0
             self.confirm_exit = False
             return None
-        if ctrl and k == pygame.K_s:
+        if ctrl and keymap.hit("save", k):
             self._save()
             return None
-        if ctrl and k == pygame.K_z:
+        if ctrl and keymap.hit("undo", k):
             self._undo()
             return None
-        if k == pygame.K_SPACE:
+        if keymap.hit("play", k):
             self._toggle_play()
             return None
-        if k == pygame.K_LEFT:
-            self._seek(self.cursor - (1000 if mods & pygame.KMOD_SHIFT else self.snap))
-        elif k == pygame.K_RIGHT:
-            self._seek(self.cursor + (1000 if mods & pygame.KMOD_SHIFT else self.snap))
-        elif k == pygame.K_UP:
+        shift = mods & pygame.KMOD_SHIFT
+        if keymap.hit("seek_left", k):
+            self._seek(self.cursor - (1000 if shift else self.snap))
+        elif keymap.hit("seek_right", k):
+            self._seek(self.cursor + (1000 if shift else self.snap))
+        elif keymap.hit("zoom_in", k):
             self.zoom_i = min(len(ZOOMS) - 1, self.zoom_i + 1)
-        elif k == pygame.K_DOWN:
+        elif keymap.hit("zoom_out", k):
             self.zoom_i = max(0, self.zoom_i - 1)
-        elif k == pygame.K_HOME:
+        elif keymap.hit("to_start", k):
             self._seek(0)
-        elif k == pygame.K_END:
+        elif keymap.hit("to_end", k):
             self._seek(self.duration)
-        elif k == pygame.K_PAGEUP:
-            self._seek(self.cursor - (30000 if mods & pygame.KMOD_SHIFT else 5000))
-        elif k == pygame.K_PAGEDOWN:
-            self._seek(self.cursor + (30000 if mods & pygame.KMOD_SHIFT else 5000))
-        elif k in (pygame.K_MINUS, pygame.K_KP_MINUS):
+        elif keymap.hit("back5", k):
+            self._seek(self.cursor - (30000 if shift else 5000))
+        elif keymap.hit("fwd5", k):
+            self._seek(self.cursor + (30000 if shift else 5000))
+        elif keymap.hit("speed_down", k):
             self._set_speed(max(0, self.speed_i - 1))
-        elif k in (pygame.K_EQUALS, pygame.K_KP_PLUS):
+        elif keymap.hit("speed_up", k):
             self._set_speed(min(len(SPEEDS) - 1, self.speed_i + 1))
-        elif k == pygame.K_v:
+        elif keymap.hit("fx", k):
             self.fx_on = not self.fx_on
             self._toast(t("Эффекты событий в редакторе: ") + (t("ВКЛ") if self.fx_on else t("ВЫКЛ")))
-        elif k == pygame.K_g:
+        elif keymap.hit("snap", k):
             self.snap_i = (self.snap_i + 1) % len(SNAPS)
             self._toast(f"{t('Сетка')}: {self.snap} {t('мс')}")
-        elif k == pygame.K_LEFTBRACKET:
+        elif keymap.hit("shift_left", k):
             self._shift(-10)
-        elif k == pygame.K_RIGHTBRACKET:
+        elif keymap.hit("shift_right", k):
             self._shift(10)
-        elif k == pygame.K_F2:
+        elif keymap.hit("rename", k):
             self.name_edit = True
             self.name_buf = self.chart.name
-        elif k in (pygame.K_DELETE, pygame.K_BACKSPACE):
+        elif keymap.hit("delete_note", k):
             ref = self._now() if self.playing else self.cursor
             n = self.nearest(ref, limit=200)
             if n is not None:
@@ -578,9 +663,24 @@ class Editor:
                 disabled = self.menu_items[i][0] == "auto" and not autochart.AVAILABLE
                 btn.color = C.DIM if disabled else C.CYAN
                 btn.draw(scr, mouse, active=(i == self.menu_sel))
-            S.blit_text(scr, S.font(14), t("ESC — закрыть меню"), C.GREY, C.WIDTH // 2, SS.U(624))
+            S.blit_text(scr, S.font(14), t("ESC — закрыть меню"), C.GREY, C.WIDTH // 2, SS.U(676))
+
+        if self.help_open:
+            self._draw_help(scr)
 
         S.post_fx(scr, self.frame, grain=20)
+
+    def _draw_help(self, scr):
+        scr.blit(self.veil, (0, 0))
+        box = SS.UR(SS.REF_W // 2 - 300, 60, 600, 600)
+        S.panel(scr, box, C.CYAN, alpha=235)
+        S.blit_text(scr, S.font(22, True), t("ГОРЯЧИЕ КЛАВИШИ"), C.CYAN, C.WIDTH // 2, SS.U(90))
+        for i, (keys, what) in enumerate(help_lines()):
+            y = SS.U(130 + i * 26)
+            scr.blit(S.font(14, True).render(keys, True, C.GOLD), (box.x + SS.U(40), y))
+            scr.blit(S.font(14).render(t(what), True, C.WHITE), (box.x + SS.U(230), y))
+        S.blit_text(scr, S.font(13), t("Нажмите любую клавишу, чтобы закрыть"), C.GREY,
+                    C.WIDTH // 2, SS.U(640))
 
     def _draw_body(self, scr, lane, y_head, y_tail):
         top, bot = max(-SS.U(10), min(y_head, y_tail)), min(C.HEIGHT + SS.U(10), max(y_head, y_tail))

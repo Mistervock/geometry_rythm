@@ -42,7 +42,7 @@ def clip_text(fnt, text, max_w):
     return text + "…"
 
 
-def draw_row(scr, rect, data, selected):
+def draw_row(scr, rect, data, selected, unlocked=False):
     if selected:
         pygame.draw.rect(scr, (34, 34, 68), rect, border_radius=SS.U(6))
         pygame.draw.rect(scr, C.CYAN, rect, SS.U(2), border_radius=SS.U(6))
@@ -51,7 +51,14 @@ def draw_row(scr, rect, data, selected):
     tx = thumb.right + SS.U(16)
     col = C.WHITE if selected else (190, 190, 210)
     scr.blit(S.font(18, True).render(data["name"], True, col), (tx, rect.y + SS.U(10)))
-    desc = clip_text(S.font(14), data["description"], rect.right - tx - SS.U(16))
+    tag_w = 0
+    if unlocked:
+        label = S.font(12, True).render(t("ПОЛУЧЕНО"), True, (20, 16, 0))
+        tag_w = label.get_width() + SS.U(20)
+        tag = pygame.Rect(rect.right - tag_w - SS.U(12), rect.y + SS.U(10), tag_w, label.get_height() + SS.U(8))
+        pygame.draw.rect(scr, C.GOLD, tag, border_radius=SS.U(4))
+        scr.blit(label, (tag.x + SS.U(10), tag.y + SS.U(4)))
+    desc = clip_text(S.font(14), data["description"], rect.right - tx - SS.U(16) - tag_w)
     scr.blit(S.font(14).render(desc, True, C.GREY), (tx, rect.y + SS.U(40)))
 
 

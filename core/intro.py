@@ -35,7 +35,7 @@ def _screen():
 
 
 def _pump():
-    pygame.display.flip()
+    display.flip()
     skip = False
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -165,7 +165,7 @@ def play_credits(clock):
         if n == TITLE_START:
             audio.play("shield", 0.5)
         _credit_frame(n, None)
-        pygame.display.flip()
+        display.flip()
         n += 1
 
 

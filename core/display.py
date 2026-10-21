@@ -53,10 +53,45 @@ def _try(flags):
     raise last
 
 
+SHOW_FPS = False
+_f3_was_down = False
+_clock = None
+
+
+def _poll_f3():
+    """F3 переключает счётчик FPS. Опрос клавиш, а не событий: каждый экран читает очередь по-своему."""
+    global SHOW_FPS, _f3_was_down
+    try:
+        down = bool(pygame.key.get_pressed()[pygame.K_F3])
+    except (pygame.error, IndexError):
+        return
+    if down and not _f3_was_down:
+        SHOW_FPS = not SHOW_FPS
+    _f3_was_down = down
+
+
 def tick(clock):
+    global _clock
+    _clock = clock
+    _poll_f3()
     if VSYNC:
         return clock.tick()
     return clock.tick(C.FPS)
+
+
+def flip():
+    """Показ кадра. Все экраны выводят кадр через эту функцию, поэтому счётчик FPS виден везде."""
+    if SHOW_FPS and _clock is not None:
+        import style as S
+        scr = pygame.display.get_surface()
+        txt = f"FPS {_clock.get_fps():5.1f}"
+        fnt = S.font(14, True)
+        w, h = fnt.size(txt)
+        box = pygame.Surface((w + 12, h + 6), pygame.SRCALPHA)
+        box.fill((0, 0, 0, 170))
+        scr.blit(box, (8, C.HEIGHT - h - 14))
+        scr.blit(fnt.render(txt, True, C.GOLD), (14, C.HEIGHT - h - 11))
+    pygame.display.flip()
 
 
 def apply():

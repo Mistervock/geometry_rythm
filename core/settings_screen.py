@@ -8,6 +8,8 @@ import audio
 import config as C
 import dialogs
 import display
+import keymap
+import keys_screen
 import cache
 import screen_setting as SS
 import settings
@@ -28,6 +30,8 @@ ROWS = (
     ("key1", "Клавиша дорожки 2", "key"),
     ("key2", "Клавиша дорожки 3", "key"),
     ("key3", "Клавиша дорожки 4", "key"),
+    ("binds_menu", "Клавиши меню и песен", "link"),
+    ("binds_editor", "Клавиши редактора", "link"),
     ("fullscreen", "Экран", "switch"),
     ("resolution", "Разрешение", "res"),
     ("preview", "Предпрослушивание песен", "switch"),
@@ -39,6 +43,8 @@ ROWS = (
 
 
 def _value_text(kind_key, idx):
+    if kind_key.startswith("binds_"):
+        return "›"
     if kind_key == "lang":
         return "Русский" if settings.get("lang") == "ru" else "English"
     if kind_key == "fullscreen":
@@ -87,7 +93,10 @@ def settings_screen(clock):
                     toast, toast_left = t("Отменено"), 1.5
                 else:
                     name = pygame.key.name(ev.key).lower()
-                    if name and name not in ("unknown key",):
+                    clash = keymap.editor_conflict(name)
+                    if clash:
+                        toast, toast_left = f"{t('Клавиша занята в редакторе')}: {t(clash)}", 2.5
+                    elif name and name not in ("unknown key",):
                         _set_lane_key(waiting, name)
                         toast, toast_left = f"{t('Дорожка')} {waiting + 1}: {settings.key_label(name)}", 2.0
                     else:
@@ -95,22 +104,25 @@ def settings_screen(clock):
                 waiting = None
                 continue
             if ev.type == pygame.KEYDOWN:
-                if ev.key == pygame.K_ESCAPE:
+                if keymap.hit("back", ev.key):
                     return
-                if ev.key in (pygame.K_UP, pygame.K_w):
+                if keymap.hit("up", ev.key):
                     sel = (sel - 1) % len(ROWS)
-                elif ev.key in (pygame.K_DOWN, pygame.K_s):
+                elif keymap.hit("down", ev.key):
                     sel = (sel + 1) % len(ROWS)
-                elif ev.key in (pygame.K_LEFT, pygame.K_a):
+                elif keymap.hit("left", ev.key):
                     toast = _adjust(sel, -1)
                     toast_left = 1.2 if toast else 0.0
-                elif ev.key in (pygame.K_RIGHT, pygame.K_d):
+                elif keymap.hit("right", ev.key):
                     toast = _adjust(sel, 1)
                     toast_left = 1.2 if toast else 0.0
-                elif ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                elif keymap.hit("confirm", ev.key):
                     act = _activate(sel)
                     if act == "reset":
                         act = _reset(clock)
+                    if isinstance(act, str) and act.startswith("binds_"):
+                        keys_screen.keys_screen(clock, "menu" if act == "binds_menu" else "editor")
+                        act = ""
                     if act == "back":
                         return
                     if act == "wait":
@@ -131,6 +143,9 @@ def settings_screen(clock):
                         act = _activate(idx)
                         if act == "reset":
                             act = _reset(clock)
+                        if isinstance(act, str) and act.startswith("binds_"):
+                            keys_screen.keys_screen(clock, "menu" if act == "binds_menu" else "editor")
+                            act = ""
                         if act == "back":
                             return
                         if act == "wait":
@@ -139,7 +154,7 @@ def settings_screen(clock):
                         elif act:
                             toast, toast_left = act, 1.5
         _draw(sel, waiting, toast if toast_left > 0 else "", mouse, frame)
-        pygame.display.flip()
+        display.flip()
 
 
 def _gap_before(i):
@@ -206,6 +221,8 @@ def _adjust(idx, direction):
 
 def _activate(idx):
     key, _, kind = ROWS[idx]
+    if key.startswith("binds_"):
+        return key
     if key.startswith("key"):
         return "wait"
     if kind == "res":

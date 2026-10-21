@@ -1,5 +1,6 @@
 
 #-- Импорт
+import os
 import sys
 
 import pygame
@@ -8,6 +9,7 @@ import achievements
 import achievements_view as V
 import config as C
 import display
+import keymap
 import style as S
 import screen_setting as SS
 from i18n import t
@@ -28,11 +30,11 @@ def run(clock):
                 pygame.quit()
                 sys.exit()
             if ev.type == pygame.KEYDOWN:
-                if ev.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE, pygame.K_RETURN, pygame.K_SPACE):
+                if keymap.hit("back", ev.key) or keymap.hit("confirm", ev.key) or ev.key == pygame.K_BACKSPACE:
                     return
-                if ev.key in (pygame.K_UP, pygame.K_w):
+                if keymap.hit("up", ev.key):
                     sel = max(0, sel - 1)
-                elif ev.key in (pygame.K_DOWN, pygame.K_s):
+                elif keymap.hit("down", ev.key):
                     sel = min(max(0, len(items) - 1), sel + 1)
             elif ev.type == pygame.MOUSEWHEEL:
                 top = max(0, min(max(0, len(items) - VISIBLE), top - ev.y))
@@ -63,10 +65,11 @@ def run(clock):
             if idx >= len(items):
                 break
             V.draw_row(scr, pygame.Rect(SS.U(140), SS.U(110 + i * ROW), C.WIDTH - SS.U(280), SS.U(ROW - 8)),
-                       items[idx][1], idx == sel)
+                       items[idx][1], idx == sel,
+                       achievements.is_unlocked(os.path.basename(items[idx][0])))
         detail = items[sel][1] if items else None
         V.draw_detail(scr, pygame.Rect(SS.U(120), SS.U(500), C.WIDTH - SS.U(240), SS.U(110)), detail)
         back.draw(scr, mouse)
         S.post_fx(scr, n, grain=40)
-        pygame.display.flip()
+        display.flip()
         n += 1

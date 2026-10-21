@@ -23,6 +23,12 @@ MIN_LANE_GAP_MS = 120
 MAX_PER_SEC = 3.0
 SKIP_START_S = 1.2
 SKIP_END_S = 1.5
+# Плотность авторазметки: порог силы пика, минимум между нотами (с), потолок нот в секунду, минимум на дорожке (мс)
+PRESETS = {
+    "easy": {"z": 3.4, "gap": 0.30, "per_sec": 2.0, "lane_gap": 220},
+    "normal": {"z": Z_THRESH, "gap": MIN_GAP_S, "per_sec": MAX_PER_SEC, "lane_gap": MIN_LANE_GAP_MS},
+    "hard": {"z": 1.8, "gap": 0.12, "per_sec": 4.5, "lane_gap": 100},
+}
 HOLD_MIN_MS = 600
 HOLD_MAX_MS = 2500
 HOLD_DROP_DB = 6
@@ -77,7 +83,7 @@ def _robust_z(x):
     return (x - med) / mad
 
 
-def _candidates(flux, sr):
+def _candidates(flux, sr, z_thresh=Z_THRESH):
     out = []
     H = PEAK_HALF
     for b in range(len(BANDS)):
@@ -86,18 +92,18 @@ def _candidates(flux, sr):
             continue
         win_max = sliding_window_view(z, 2 * H + 1).max(axis=1)
         center = z[H:len(z) - H]
-        peaks = np.where((center == win_max) & (center > Z_THRESH))[0] + H
+        peaks = np.where((center == win_max) & (center > z_thresh))[0] + H
         out.extend((float(z[i]), int(i), b) for i in peaks)
     out.sort(key=lambda c: -c[0])
     return out
 
 
-def _select(cands, sr, frames, dur):
+def _select(cands, sr, frames, dur, gap=MIN_GAP_S, per_sec=MAX_PER_SEC, lane_gap_ms=MIN_LANE_GAP_MS):
     accepted = []
     all_t = []
     lane_t = [[] for _ in BANDS]
-    min_gap = MIN_GAP_S
-    lane_gap = MIN_LANE_GAP_MS / 1000.0
+    min_gap = gap
+    lane_gap = lane_gap_ms / 1000.0
     for strength, frame, lane in cands:
         t = (frame * HOP + N // 2) / sr
         if t < SKIP_START_S or t > dur - SKIP_END_S:
@@ -109,7 +115,7 @@ def _select(cands, sr, frames, dur):
             continue
         lo = bisect.bisect_left(all_t, t - 0.5)
         hi = bisect.bisect_right(all_t, t + 0.5)
-        if hi - lo >= MAX_PER_SEC:
+        if hi - lo >= per_sec:
             continue
         lt = lane_t[lane]
         j = bisect.bisect_left(lt, t)
@@ -160,15 +166,16 @@ def _energy(y, sr):
     return [int(round(v * 100)) for v in env], round(sr / HOP / ENERGY_DECIM, 3)
 
 
-def build(path):
+def build(path, preset="normal"):
     dec = decode(path)
     if dec is None:
         return None
     y, sr = dec
     dur = len(y) / sr
     flux, db = _band_analysis(y, sr)
-    cands = _candidates(flux, sr)
-    accepted = _select(cands, sr, flux.shape[1], dur)
+    p = PRESETS.get(preset, PRESETS["normal"])
+    cands = _candidates(flux, sr, p["z"])
+    accepted = _select(cands, sr, flux.shape[1], dur, p["gap"], p["per_sec"], p["lane_gap"])
     notes = _holds(accepted, db, sr)
     energy, energy_fps = _energy(y, sr)
     return {

@@ -20,6 +20,7 @@ DEFAULTS = {
     "resolution": "1280x720",
     "preview": 1,
     "media_dim": 45,
+    "keys": {},
 }
 
 LIMITS = {
@@ -62,6 +63,12 @@ def _sanitize():
         d["lane_keys"] = list(DEFAULTS["lane_keys"])
     if d.get("lang") not in ("en", "ru"):
         d["lang"] = "en"
+    keys = d.get("keys")
+    if isinstance(keys, dict):
+        d["keys"] = {a: [n for n in v if isinstance(n, str) and n] for a, v in keys.items()
+                     if isinstance(a, str) and isinstance(v, list) and v and all(isinstance(n, str) and n for n in v)}
+    else:
+        d["keys"] = {}
     d["fullscreen"] = 1 if d.get("fullscreen") in (1, True) else 0
     d["preview"] = 1 if d.get("preview") in (1, True) else 0
 

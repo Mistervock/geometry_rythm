@@ -7,6 +7,7 @@ import pygame
 
 import config as C
 import display
+import keymap
 import records
 import screen_setting as SS
 import style as S
@@ -70,13 +71,13 @@ def main_menu(clock):
                 pygame.quit()
                 sys.exit()
             if ev.type == pygame.KEYDOWN:
-                if ev.key in (pygame.K_UP, pygame.K_w):
+                if keymap.hit("up", ev.key):
                     selected = (selected - 1) % len(buttons)
-                elif ev.key in (pygame.K_DOWN, pygame.K_s):
+                elif keymap.hit("down", ev.key):
                     selected = (selected + 1) % len(buttons)
-                elif ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                elif keymap.hit("confirm", ev.key):
                     return buttons[selected][0]
-                elif ev.key == pygame.K_ESCAPE:
+                elif keymap.hit("back", ev.key):
                     return "quit"
             if ev.type == pygame.MOUSEMOTION:
                 for i, (_, btn) in enumerate(buttons):
@@ -115,7 +116,7 @@ def main_menu(clock):
                         C.WIDTH // 2, C.HEIGHT - SS.U(24))
 
         S.post_fx(scr, n, grain=45)
-        pygame.display.flip()
+        display.flip()
         n += 1
 
 
@@ -163,5 +164,5 @@ def records_screen(clock):
 
         back.draw(scr, mouse)
         S.post_fx(scr, n, grain=45)
-        pygame.display.flip()
+        display.flip()
         n += 1

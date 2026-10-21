@@ -93,6 +93,20 @@ def results_screen(clock, res):
             S.blit_text(scr, S.font(14), f"MAX COMBO {res['max_combo']}", C.GREY,
                         C.WIDTH // 2 + SS.U(60), SS.U(302), 255 * S.smoothstep((n - 70) / 30))
 
+        if n >= 110 and res.get("rank"):
+            rk = res["rank"]
+            if rk["new"]:
+                head = t("НОВЫЙ ЛУЧШИЙ РАНГ") if rk["prev"] else t("РАНГ ЧАРТА ПОЛУЧЕН")
+                tail = f"{rk['prev']} → {rk['best']}" if rk["prev"] else rk["best"]
+            else:
+                head, tail = t("ЛУЧШИЙ РАНГ ЧАРТА"), rk["best"]
+            line = f"{head}: {tail}"
+            if rk.get("song"):
+                line += f"   ·   {t('РАНГ ПЕСНИ')}: {rk['song']}"
+            S.blit_text(scr, S.fit(S.font(14, True), line, SS.U(620)), line,
+                        C.GOLD if rk["new"] else C.GREY, C.WIDTH // 2, SS.U(332),
+                        255 * S.smoothstep((n - 110) / 30))
+
         if n >= 100:
             line = (f"PERFECT {counts['perfect']}   GREAT {counts['great']}   "
                     f"GOOD {counts['good']}   MISS {counts['miss']}")
@@ -158,5 +172,5 @@ def results_screen(clock, res):
             ov.fill((0, 0, 0))
             ov.set_alpha(int(255 * (20 - n) / 20))
             scr.blit(ov, (0, 0))
-        pygame.display.flip()
+        display.flip()
         n += 1
