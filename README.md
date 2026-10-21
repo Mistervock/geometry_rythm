@@ -294,6 +294,21 @@ There is **no prebuilt Windows .exe** available at the moment. The repository do
 
 The [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases) may be used for release announcements, but **there is no downloadable .exe right now**.
 
+### Credits, copyright, and free mods
+
+**Game code:** Copyright © 2026 Mistervock. All rights reserved except for the limited permissions explicitly described in [LICENSE.md](LICENSE.md).
+
+**Music credit:** **“YARARARA (ヤラララ)” — AnythingBecomeMoe, featuring Kasane Teto SV2.** [Official music video](https://www.youtube.com/watch?v=T24rF_x0TmQ). This credit identifies the song's creator; it does not mean the music or video is licensed by the game author. Third-party music, video, characters, artwork, and other assets remain subject to their respective rights holders' terms.
+
+**Free modding is allowed under the custom terms in [LICENSE.md](LICENSE.md):**
+- You may download and use the project for personal, non-commercial purposes and create modifications.
+- Mods must be available to everyone free of charge. Do not sell mods, charge for downloads or access, put them behind a paywall or subscription, or sell bundles that include them.
+- Distribute mods as separate files (for example, chart JSON, your own assets, or patches) that require a copy of the game. Do not bundle the game's source code, complete game, executable, or original third-party media with a mod.
+- Do not republish the game's full source code or substantial portions on other websites, repositories, or file-sharing services without the author's prior written permission.
+- Keep the original copyright notice, credit **Geometry Rhythm** and link to this repository. Clearly label mods as unofficial; do not claim authorship of the original game, impersonate the project author, or imply endorsement.
+- Do not present a modified version as an official release or distribute a compiled/repackaged game without prior written permission.
+
+This is a **custom, restrictive permission notice**, not a standard open-source licence. GitHub's own terms may still allow users to view or fork a public repository within GitHub; this README and the custom terms do not disable that platform feature.
 ---
 
 ## Русский
@@ -578,3 +593,19 @@ geometry_rythm/
 **Готового Windows-файла .exe пока нет.** В репозитории также нет скрипта сборки исполняемого файла или спецификации PyInstaller. Компиляция или перепаковка распространяемого EXE сейчас недоступна из-за авторских ограничений, установленных автором проекта. Не следует ожидать готовую сборку, пока автор явно не разрешит её и не опубликует сам.
 
 Страница [GitHub Releases](https://github.com/Mistervock/geometry_rythm/releases) может использоваться для объявлений о релизах, но **скачать с неё готовый .exe сейчас нельзя**.
+
+### Авторские права, указание авторства и бесплатные модификации
+
+**Исходный код игры:** © 2026 Mistervock. Все права защищены, кроме ограниченных разрешений, прямо указанных в файле [LICENSE.md](LICENSE.md).
+
+**Музыка:** **«YARARARA (ヤラララ)» — AnythingBecomeMoe, при участии Kasane Teto SV2.** [Официальный музыкальный клип на YouTube](https://www.youtube.com/watch?v=T24rF_x0TmQ). Эта запись указывает автора песни, но сама по себе не означает, что автор игры получил права на распространение музыки или видео. Музыка, видео, персонажи, иллюстрации и другие сторонние материалы остаются под условиями соответствующих правообладателей.
+
+**Создавать модификации можно бесплатно — на условиях [LICENSE.md](LICENSE.md):**
+- Игру разрешено скачивать и использовать в личных некоммерческих целях, а также создавать собственные модификации.
+- Модификации должны быть доступны всем бесплатно. Запрещено продавать моды, брать плату за скачивание или доступ, размещать их за платной подпиской/пейволлом или продавать наборы с модами.
+- Распространяй модификации отдельными файлами (например, JSON-чартами, собственными ресурсами или патчами), для которых нужна копия игры. Не включай в мод исходный код игры, полную копию игры, исполняемый файл или оригинальные сторонние медиа.
+- Без предварительного письменного разрешения автора нельзя публиковать полный исходный код игры или его существенные части на других сайтах, в репозиториях или файлообменниках.
+- Сохраняй уведомление об авторских правах, указывай **Geometry Rhythm** и ссылку на этот репозиторий. Помечай мод как неофициальный. Нельзя приписывать себе авторство оригинальной игры, выдавать себя за автора проекта или создавать впечатление, что автор одобрил мод.
+- Нельзя выдавать изменённую версию за официальный релиз или распространять скомпилированную/перепакованную игру без предварительного письменного разрешения автора.
+
+Это **специальные ограничительные условия использования**, а не стандартная open-source-лицензия. Условия GitHub могут по-прежнему разрешать просмотр и создание форков публичного репозитория внутри GitHub; текст README и эти условия не отключают такую возможность платформы.
