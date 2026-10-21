@@ -308,7 +308,6 @@ The [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases
 - Keep the original copyright notice, credit **Geometry Rhythm** and link to this repository. Clearly label mods as unofficial; do not claim authorship of the original game, impersonate the project author, or imply endorsement.
 - Do not present a modified version as an official release or distribute a compiled/repackaged game without prior written permission.
 
-This is a **custom, restrictive permission notice**, not a standard open-source licence. GitHub's own terms may still allow users to view or fork a public repository within GitHub; this README and the custom terms do not disable that platform feature.
 ---
 
 ## Русский
@@ -608,4 +607,4 @@ geometry_rythm/
 - Сохраняй уведомление об авторских правах, указывай **Geometry Rhythm** и ссылку на этот репозиторий. Помечай мод как неофициальный. Нельзя приписывать себе авторство оригинальной игры, выдавать себя за автора проекта или создавать впечатление, что автор одобрил мод.
 - Нельзя выдавать изменённую версию за официальный релиз или распространять скомпилированную/перепакованную игру без предварительного письменного разрешения автора.
 
-Это **специальные ограничительные условия использования**, а не стандартная open-source-лицензия. Условия GitHub могут по-прежнему разрешать просмотр и создание форков публичного репозитория внутри GitHub; текст README и эти условия не отключают такую возможность платформы.
+
