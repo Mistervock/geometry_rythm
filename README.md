@@ -290,7 +290,7 @@ Local data includes **data/charts/** for charts, **data/songmeta/** for song tit
 
 ### Windows executable and distribution
 
-There is **no prebuilt Windows .exe** available at the moment. The repository does not include an executable build script or a PyInstaller specification. Compiling or repackaging a distributable executable is currently unavailable under the copyright restrictions set by the project author. Please do not expect a compiled download until the author explicitly authorizes and publishes one.
+There is **no prebuilt Windows .exe** available at the moment. The repository does not include an executable build script or a PyInstaller specification. You may run and modify your own local copy under the terms in [LICENSE.md](LICENSE.md), but distributing or publishing a compiled/repackaged copy of the game requires the author's prior written permission. Please do not expect an official compiled download until the author publishes one.
 
 The [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases) may be used for release announcements, but **there is no downloadable .exe right now**.
 
@@ -590,7 +590,7 @@ geometry_rythm/
 
 ### Windows-версия (.exe) и распространение
 
-**Готового Windows-файла .exe пока нет.** В репозитории также нет скрипта сборки исполняемого файла или спецификации PyInstaller. Компиляция или перепаковка распространяемого EXE сейчас недоступна из-за авторских ограничений, установленных автором проекта. Не следует ожидать готовую сборку, пока автор явно не разрешит её и не опубликует сам.
+**Готового Windows-файла .exe пока нет.** В репозитории также нет скрипта сборки исполняемого файла или спецификации PyInstaller. Локально запускать и изменять свою копию можно на условиях [LICENSE.md](LICENSE.md), однако распространять или публиковать скомпилированную/перепакованную игру разрешается только с предварительного письменного разрешения автора. Официальной готовой сборки не будет, пока автор сам её не опубликует.
 
 Страница [GitHub Releases](https://github.com/Mistervock/geometry_rythm/releases) может использоваться для объявлений о релизах, но **скачать с неё готовый .exe сейчас нельзя**.
 
