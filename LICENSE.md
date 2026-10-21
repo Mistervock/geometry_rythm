@@ -56,7 +56,7 @@ The project and permitted mods are provided “as is”, without warranties to t
 
 ---
 
-# Неформальное изложение на русском
+#русский
 
 **© 2026 Mistervock. Все права защищены, кроме прямо перечисленных ниже разрешений.**
 
