@@ -1,9 +1,22 @@
 {
- "version": 4,
+ "version": 5,
+ "id": "afab33b318a8291e",
  "song": "game.ogg",
  "name": "Чарт",
  "charter": "Mistervock",
  "difficulty": 3,
+ "grid": {
+  "mode": "ms",
+  "ms_step": 50,
+  "bpm": 120.0,
+  "offset": 0.0,
+  "div": 4,
+  "bar": 4,
+  "snap": true,
+  "show_beats": true,
+  "show_bars": true,
+  "show_sub": true
+ },
  "notes": [
   {
    "t": 3768,

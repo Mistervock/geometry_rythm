@@ -8,6 +8,7 @@ import audio
 import config as C
 import display
 import records
+import results_stats
 import screen_setting as SS
 import style as S
 from i18n import t
@@ -20,7 +21,10 @@ def results_screen(clock, res):
     failed = res["failed"]
     grade = res["grade"]
     counts = res["counts"]
-    can_record = records.qualifies(score)
+    practice = bool(res.get("practice"))
+    can_record = (not practice) and records.qualifies(score)
+    tab = 0
+    unlocked = list(res.get("unlocked") or [])
 
     name = ""
     saved = None
@@ -28,8 +32,16 @@ def results_screen(clock, res):
     blink = 0
     n = 0
 
-    again_btn = S.Btn((C.WIDTH // 2 - SS.U(290), SS.U(614), SS.U(280), SS.U(52)), t("ЕЩЁ РАЗ"), C.CYAN, S.font(18, True))
-    menu_btn = S.Btn((C.WIDTH // 2 + SS.U(10), SS.U(614), SS.U(280), SS.U(52)), t("В МЕНЮ"), C.PURPLE_LIGHT, S.font(18, True))
+    if practice:
+        again_btn = S.Btn((C.WIDTH // 2 - SS.U(430), SS.U(614), SS.U(270), SS.U(52)), t("ЕЩЁ РАЗ"), C.CYAN, S.font(18, True))
+        setup_btn = S.Btn((C.WIDTH // 2 - SS.U(135), SS.U(614), SS.U(270), SS.U(52)), t("ИЗМЕНИТЬ УЧАСТОК"), C.GOLD, S.font(17, True))
+        menu_btn = S.Btn((C.WIDTH // 2 + SS.U(160), SS.U(614), SS.U(270), SS.U(52)), t("В МЕНЮ"), C.PURPLE_LIGHT, S.font(18, True))
+    else:
+        again_btn = S.Btn((C.WIDTH // 2 - SS.U(290), SS.U(614), SS.U(280), SS.U(52)), t("ЕЩЁ РАЗ"), C.CYAN, S.font(18, True))
+        setup_btn = None
+        menu_btn = S.Btn((C.WIDTH // 2 + SS.U(10), SS.U(614), SS.U(280), SS.U(52)), t("В МЕНЮ"), C.PURPLE_LIGHT, S.font(18, True))
+    tab_btns = [S.Btn((SS.U(20 + i * 150), SS.U(10), SS.U(140), SS.U(30)), label, C.CYAN, S.font(13, True))
+                for i, label in enumerate((t("ОБЗОР"), t("ПОДРОБНО")))]
     if failed:
         audio.play("split", 0.5)
     else:
@@ -44,6 +56,9 @@ def results_screen(clock, res):
             if ev.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            if ev.type == pygame.KEYDOWN and ready and ev.key == pygame.K_TAB and (saved is not None or not can_record):
+                tab = 1 - tab
+                continue
             if ev.type == pygame.KEYDOWN and ready:
                 if saved is None and can_record:
                     if ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
@@ -61,19 +76,39 @@ def results_screen(clock, res):
                     return "again"
                 if ev.key in (pygame.K_m, pygame.K_ESCAPE):
                     return "menu"
+                if ev.key == pygame.K_s and practice:
+                    return "setup"
             if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1 and ready:
                 buttons_open = saved is not None or not can_record
+                for i, b in enumerate(tab_btns):
+                    if buttons_open and b.rect.collidepoint(ev.pos):
+                        tab = i
                 if buttons_open and again_btn.rect.collidepoint(ev.pos):
                     return "again"
+                if buttons_open and setup_btn is not None and setup_btn.rect.collidepoint(ev.pos):
+                    return "setup"
                 if buttons_open and menu_btn.rect.collidepoint(ev.pos):
                     return "menu"
 
         scr = pygame.display.get_surface()
         scr.fill((0, 0, 0))
 
+        if tab == 1 and n >= 150:
+            results_stats.draw(scr, res, n)
+            for i, b in enumerate(tab_btns):
+                b.draw(scr, mouse, active=(i == tab))
+            again_btn.draw(scr, mouse)
+            if setup_btn is not None:
+                setup_btn.draw(scr, mouse)
+            menu_btn.draw(scr, mouse)
+            S.post_fx(scr, n, grain=50)
+            display.flip()
+            n += 1
+            continue
+
         k = n - 10
         if k >= 0:
-            title = t("ПРОВАЛ") if failed else t("ФИНИШ")
+            title = t("ПРОВАЛ") if failed else (t("ПРАКТИКА") if practice else t("ФИНИШ"))
             col = C.RED_LIGHT if failed else C.GOLD
             S.glitch_title(scr, S.font(44, True), title, col, C.WIDTH // 2, SS.U(110), k)
 
@@ -93,7 +128,19 @@ def results_screen(clock, res):
             S.blit_text(scr, S.font(14), f"MAX COMBO {res['max_combo']}", C.GREY,
                         C.WIDTH // 2 + SS.U(60), SS.U(302), 255 * S.smoothstep((n - 70) / 30))
 
-        if n >= 110 and res.get("rank"):
+        if n >= 40 and practice:
+            line = f"{int(res.get('speed', 1) * 100)}%   {res['section'][0] // 1000}–{res['section'][1] // 1000} {t('с')}   " \
+                   f"{t('попыток')}: {len(res.get('attempts', []))}"
+            best = max((a["acc"] for a in res.get("attempts", [])), default=None)
+            if best is not None:
+                line += f"   {t('лучшая точность')}: {best:.1f}%"
+            S.blit_text(scr, S.fit(S.font(14, True), line, SS.U(760)), line, C.GOLD, C.WIDTH // 2, SS.U(208),
+                        255 * S.smoothstep((n - 40) / 30))
+        elif n >= 45 and res.get("pb_compare") and res["pb_compare"]["better"]:
+            S.blit_text(scr, S.font(15, True), t("★ НОВЫЙ ЛИЧНЫЙ РЕКОРД"), C.GOLD, C.WIDTH // 2, SS.U(208),
+                        255 * S.smoothstep((n - 45) / 30))
+
+        if n >= 110 and res.get("rank") and not practice:
             rk = res["rank"]
             if rk["new"]:
                 head = t("НОВЫЙ ЛУЧШИЙ РАНГ") if rk["prev"] else t("РАНГ ЧАРТА ПОЛУЧЕН")
@@ -108,12 +155,20 @@ def results_screen(clock, res):
                         255 * S.smoothstep((n - 110) / 30))
 
         if n >= 100:
+            st = res.get("stats") or {}
             line = (f"PERFECT {counts['perfect']}   GREAT {counts['great']}   "
                     f"GOOD {counts['good']}   MISS {counts['miss']}")
+            if st.get("holds_total"):
+                line += f"   HOLD {st['holds_ok']}/{st['holds_total']}"
             S.blit_text(scr, S.font(14), line, C.GREY, C.WIDTH // 2, SS.U(355),
                         255 * S.smoothstep((n - 100) / 30))
 
-        if n >= 120 and res.get("achievement"):
+        if n >= 120 and unlocked:
+            name = unlocked[((n - 120) // 110) % len(unlocked)]
+            line = f"{t('ДОСТИЖЕНИЕ ПОЛУЧЕНО')}: {name}"
+            S.blit_text(scr, S.fit(S.font(14, True), line, SS.U(560)), line, C.GOLD,
+                        C.WIDTH // 2, SS.U(372), 255 * S.smoothstep((n - 120) / 30))
+        elif n >= 120 and res.get("achievement"):
             ach = res["achievement"]
             head = t("ДОСТИЖЕНИЕ ПОЛУЧЕНО") if ach["new"] else t("ДОСТИЖЕНИЕ")
             line = f"{head}: {ach['name']}"
@@ -162,9 +217,14 @@ def results_screen(clock, res):
             ready_btns = saved is not None or not can_record
             if ready_btns:
                 again_btn.draw(scr, mouse)
+                if setup_btn is not None:
+                    setup_btn.draw(scr, mouse)
                 menu_btn.draw(scr, mouse)
-            S.blit_text(scr, S.font(14), t("SPACE — ещё раз, M — в меню"), (255, 210, 60),
-                        C.WIDTH // 2, SS.U(696))
+                for i, b in enumerate(tab_btns):
+                    b.draw(scr, mouse, active=(i == tab))
+            hint = t("SPACE — ещё раз, S — участок, M — в меню, TAB — подробно") if practice \
+                else t("SPACE — ещё раз, M — в меню, TAB — подробно")
+            S.blit_text(scr, S.font(14), hint, (255, 210, 60), C.WIDTH // 2, SS.U(696))
 
         S.post_fx(scr, n, grain=50)
         if n < 20:

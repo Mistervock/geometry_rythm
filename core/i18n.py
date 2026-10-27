@@ -202,9 +202,9 @@ EN = {
     "Белый круг падает быстрее нот. Поймать нажатием клавиши — +1 HP, промах — только глитч, без урона.": "A white circle falls faster than notes. Catch it with the lane key for +1 HP; a miss only glitches, no damage.",
     "Экран дрожит и рвётся на полосы. Сила и длительность настраиваются.": "The screen jitters and tears into strips. Strength and duration are adjustable.",
     "Белая вспышка: появляется за «скорость появления» и гаснет за «длительность».": "A white flash: fades in over the 'appear speed' and out over the 'duration'.",
-    "Картинка из папки images/ появляется в центре, может двигаться и плавно исчезать.": "A picture from images/ appears in the centre; it can move and fade smoothly.",
+    "Картинка из папки images/ появляется в центре, может двигаться и плавно исчезать. Можно растянуть на весь экран.": "A picture from images/ appears in the centre; it can move and fade smoothly. It can be stretched to the full screen.",
     "Меняет цвет фона. Кнопка «ВЕРНУТЬ ФОН» возвращает исходный цвет.": "Changes the background colour. The 'RESTORE BG' button brings back the original colour.",
-    "Ролик из папки images/ на заданное время. «ПОДОГНАТЬ» вписывает его в экран.": "A video from images/ for a set time. 'FIT SCREEN' fits it to the screen.",
+    "Ролик из папки images/ на заданное время. «ПОДОГНАТЬ» вписывает его в экран, «Растянуть на весь экран» заполняет весь экран.": "A video from images/ for a set time. 'FIT SCREEN' fits it to the screen; 'Stretch to full screen' fills the whole screen.",
     "Дорожка (1=D … 4=K)": "Lane (1=D … 4=K)",
     "Скорость падения, %": "Fall speed, %",
     "+ ХИЛЛ": "+ HEAL",
@@ -437,6 +437,11 @@ EN = {
     "↑↓ событие · Enter раскрыть папку · Tab поле · ←→ изменить (Shift ×5) · 1–8 добавить · P просмотр · R исходный фон": "↑↓ event · Enter open folder · Tab field · ←→ change (Shift ×5) · 1–8 add · P preview · R original background",
     "Ctrl+C копировать · Ctrl+V вставить · Ctrl+Shift+V всем таким · Ctrl+D копия · L замок · Del удалить · ESC назад": "Ctrl+C copy · Ctrl+V paste · Ctrl+Shift+V paste to all · Ctrl+D duplicate · L lock · Del delete · ESC back",
 }
+
+
+from i18n_ext import EXT as _EXT
+for _k, _v in _EXT.items():
+    EN.setdefault(_k, _v)
 
 
 #-- Функции

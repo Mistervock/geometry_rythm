@@ -26,9 +26,13 @@ def _thumb(name, size):
     return surf
 
 
-def draw_thumb(scr, rect, name):
+def draw_thumb(scr, rect, name, glyph=None, glyph_col=None):
     pygame.draw.rect(scr, (12, 12, 28), rect, border_radius=SS.U(6))
-    pygame.draw.rect(scr, C.DIM, rect, SS.U(2), border_radius=SS.U(6))
+    pygame.draw.rect(scr, glyph_col or C.DIM, rect, SS.U(2), border_radius=SS.U(6))
+    if glyph:
+        S.blit_text(scr, S.font(int(rect.h / SS.SCALE * 0.55), True), glyph, glyph_col or C.DIM,
+                    rect.centerx, rect.centery)
+        return
     surf = _thumb(name, min(rect.w, rect.h) - SS.U(8))
     if surf is not None:
         scr.blit(surf, surf.get_rect(center=rect.center))
@@ -42,12 +46,12 @@ def clip_text(fnt, text, max_w):
     return text + "…"
 
 
-def draw_row(scr, rect, data, selected, unlocked=False):
+def draw_row(scr, rect, data, selected, unlocked=False, glyph=None):
     if selected:
         pygame.draw.rect(scr, (34, 34, 68), rect, border_radius=SS.U(6))
         pygame.draw.rect(scr, C.CYAN, rect, SS.U(2), border_radius=SS.U(6))
     thumb = pygame.Rect(rect.x + SS.U(10), rect.y + SS.U(8), rect.h - SS.U(16), rect.h - SS.U(16))
-    draw_thumb(scr, thumb, data["image"])
+    draw_thumb(scr, thumb, data["image"], glyph, C.GOLD if (glyph and unlocked) else None)
     tx = thumb.right + SS.U(16)
     col = C.WHITE if selected else (190, 190, 210)
     scr.blit(S.font(18, True).render(data["name"], True, col), (tx, rect.y + SS.U(10)))

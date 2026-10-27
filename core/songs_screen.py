@@ -10,6 +10,8 @@ import dev_menu
 import display
 import editor
 import keymap
+import library
+import startup
 import settings
 import screen_setting as SS
 import songs
@@ -130,6 +132,10 @@ def _sort_rect():
     return pygame.Rect(SS.UR(800, 34, 360, 34))
 
 
+def _fav_rect():
+    return pygame.Rect(SS.UR(500, 34, 290, 34))
+
+
 #-- Цикл
 
 def _songs_loop(clock):
@@ -137,8 +143,16 @@ def _songs_loop(clock):
     if not all_names:
         return _empty_screen(clock)
     query, typing, sort_i = "", False, 0
+    fav_only = False
+    lib = library.get()
+    fav_songs = set()
     stats, colors = _refresh(all_names)
-    entries = _entries(all_names, SORTS[sort_i][0], stats, query)
+
+    def pool():
+        nonlocal fav_songs
+        fav_songs = {n for n in all_names if lib.is_favorite_song(n)}
+        return [n for n in all_names if n in fav_songs] if fav_only else all_names
+    entries = _entries(pool(), SORTS[sort_i][0], stats, query)
     names = [v for k, v in entries if k == "song"]
     view = "list"
     sel_song = 0
@@ -147,6 +161,7 @@ def _songs_loop(clock):
     top_chart = 0
     charts = []
     chart_ranks = []
+    chart_favs = []
     song = None
     song_dur = 0
     cover = None
@@ -158,11 +173,13 @@ def _songs_loop(clock):
     back_btn = S.Btn((C.WIDTH // 2 - SS.U(70), SS.U(528), SS.U(140), SS.U(40)), t("НАЗАД"), C.PURPLE_LIGHT, S.font(16, True))
     random_btn = S.Btn((C.WIDTH // 2 + SS.U(90), SS.U(528), SS.U(200), SS.U(40)), t("СЛУЧАЙНАЯ"), C.GOLD, S.font(16, True))
     chart_specs = (
-        ("play", t("ИГРАТЬ"), C.GREEN, 150),
-        ("edit", t("РЕДАКТ."), C.CYAN, 150),
-        ("new", t("НОВЫЙ"), C.GOLD, 150),
-        ("del", t("УДАЛИТЬ"), C.RED_LIGHT, 150),
-        ("back", t("НАЗАД"), C.PURPLE_LIGHT, 140),
+        ("play", t("ИГРАТЬ"), C.GREEN, 140),
+        ("practice", t("ПРАКТИКА"), C.GOLD, 150),
+        ("fav", t("★ ИЗБР."), C.GOLD, 120),
+        ("edit", t("РЕДАКТ."), C.CYAN, 140),
+        ("new", t("НОВЫЙ"), C.GOLD, 130),
+        ("del", t("УДАЛИТЬ"), C.RED_LIGHT, 140),
+        ("back", t("НАЗАД"), C.PURPLE_LIGHT, 120),
     )
     chart_btns = []
     x = (C.WIDTH - (sum(SS.U(w) for *_, w in chart_specs) + SS.U(14) * (len(chart_specs) - 1))) // 2
@@ -174,17 +191,18 @@ def _songs_loop(clock):
         """Пересобирает список после смены запроса, сортировки или статистики. Выбор остаётся на той же песне."""
         nonlocal entries, names, sel_song, top_song
         keep = names[sel_song] if names and sel_song < len(names) else None
-        entries = _entries(all_names, SORTS[sort_i][0], stats, query)
+        entries = _entries(pool(), SORTS[sort_i][0], stats, query)
         names = [v for k, v in entries if k == "song"]
         sel_song = names.index(keep) if keep in names else 0
         if reset_top or keep not in names:
             top_song = 0
 
     def load_charts():
-        nonlocal charts, chart_ranks
+        nonlocal charts, chart_ranks, chart_favs
         charts = songs.charts_for(song)
         ranks = songs._ranks()
         chart_ranks = [songs.chart_rank(c, ranks) for c in charts]
+        chart_favs = [lib.is_favorite_chart(c) for c in charts]
 
     def open_song(idx):
         nonlocal view, song, song_dur, sel_chart, top_chart, confirm_del, cover
@@ -214,10 +232,17 @@ def _songs_loop(clock):
             confirm_del = False
             return None
         if action == "play" and charts:
-            return ("play", charts[sel_chart])
+            return ("play", charts[sel_chart], "play")
+        if action == "practice" and charts:
+            return ("play", charts[sel_chart], "practice")
+        if action == "fav" and charts:
+            on = lib.toggle_favorite_chart(charts[sel_chart])
+            load_charts()
+            toast, toast_left = (t("Чарт добавлен в избранное") if on else t("Чарт убран из избранного")), 1.5
+            return None
         if action == "edit" and charts:
             ch = charts[sel_chart]
-            editor.Editor(clock, ch).run()
+            startup.open_editor(clock, ch)
             reload_charts(keep_name=ch.name)
             return None
         if action == "new":
@@ -268,7 +293,17 @@ def _songs_loop(clock):
                         rebuild(reset_top=True)
                     continue
                 result = _list_event(ev, mouse, entries, names, sel_song, top_song, back_btn, random_btn,
-                                     {"search": _search_rect(), "sort": _sort_rect()})
+                                     {"search": _search_rect(), "sort": _sort_rect(), "fav": _fav_rect()})
+                if result == "favorite" and names:
+                    on = lib.toggle_favorite_song(names[sel_song])
+                    toast, toast_left = (t("Песня добавлена в избранное") if on else t("Песня убрана из избранного")), 1.5
+                    rebuild()
+                    result = None
+                elif result == "fav_filter":
+                    fav_only = not fav_only
+                    rebuild(reset_top=True)
+                    toast, toast_left = (t("Показано только избранное") if fav_only else t("Показаны все песни")), 1.5
+                    result = None
                 if result == "random":
                     result = _random_pick(names)
                 if result == "search":
@@ -314,6 +349,10 @@ def _songs_loop(clock):
                         confirm_del = False
                     elif keymap.hit("confirm", ev.key):
                         result = do_action("play")
+                    elif keymap.hit("practice_chart", ev.key):
+                        result = do_action("practice")
+                    elif keymap.hit("favorite", ev.key):
+                        do_action("fav")
                     elif keymap.hit("edit_chart", ev.key):
                         do_action("edit")
                     elif keymap.hit("new_chart", ev.key):
@@ -372,7 +411,7 @@ def _songs_loop(clock):
                 if sel_entry >= top_song + VISIBLE_SONGS:
                     top_song = sel_entry - VISIBLE_SONGS + 1
             top_song = max(0, min(top_song, max(0, len(entries) - VISIBLE_SONGS)))
-            ui = {"query": query, "typing": typing, "sort": t(SORTS[sort_i][1]),
+            ui = {"query": query, "typing": typing, "sort": t(SORTS[sort_i][1]), "fav": fav_songs, "fav_only": fav_only,
                   "found": len(names), "total": len(all_names), "toast": toast if toast_left > 0 else ""}
             _draw_list(entries, stats, colors, sel_entry, top_song,
                        _bg_color(names[sel_song], colors) if names else BLACK,
@@ -384,7 +423,7 @@ def _songs_loop(clock):
                 top_chart = sel_chart - VISIBLE_CHARTS + 1
             _draw_charts(song, song_dur, charts, sel_chart, top_chart, chart_btns,
                          mouse, frame, toast if toast_left > 0 else "", cover,
-                         chart_ranks, stats.get(song, (0, 0, None))[2] if song else None)
+                         chart_ranks, stats.get(song, (0, 0, None))[2] if song else None, chart_favs)
         display.flip()
 
 
@@ -403,7 +442,7 @@ def _random_pick(names):
     pool = [ch for name in names for ch in songs.charts_for(name)]
     if not pool:
         return None
-    return ("play", random.choice(pool))
+    return ("play", random.choice(pool), "play")
 
 
 def _list_event(ev, mouse, entries, names, sel, top, back_btn, random_btn, rects=None):
@@ -419,6 +458,10 @@ def _list_event(ev, mouse, entries, names, sel, top, back_btn, random_btn, rects
             return "search"
         if keymap.hit("sort", k):
             return "sort"
+        if keymap.hit("fav_filter", k):
+            return "fav_filter"
+        if keymap.hit("favorite", k):
+            return "favorite"
         if not names:
             return None
         if keymap.hit("up", k):
@@ -440,6 +483,8 @@ def _list_event(ev, mouse, entries, names, sel, top, back_btn, random_btn, rects
                 return "search"
             if rects["sort"].collidepoint(ev.pos):
                 return "sort"
+            if rects.get("fav") and rects["fav"].collidepoint(ev.pos):
+                return "fav_filter"
         e = _row_at(ev.pos, 120, ROW_SONGS, VISIBLE_SONGS, top, len(entries))
         if e is not None and entries[e][0] == "song":
             return ("select", names.index(entries[e][1]), top, True)
@@ -494,6 +539,15 @@ def _draw_search(scr, ui, mouse):
     hov = box2.collidepoint(mouse)
     pygame.draw.rect(scr, (34, 34, 68) if hov else (14, 14, 30), box2, border_radius=SS.U(6))
     pygame.draw.rect(scr, C.GOLD if hov else C.DIM, box2, SS.U(2), border_radius=SS.U(6))
+    fbox = _fav_rect()
+    fhov = fbox.collidepoint(mouse)
+    on = ui.get("fav_only")
+    pygame.draw.rect(scr, (34, 34, 68) if fhov else (14, 14, 30), fbox, border_radius=SS.U(6))
+    pygame.draw.rect(scr, C.GOLD if (on or fhov) else C.DIM, fbox, SS.U(2), border_radius=SS.U(6))
+    S.draw_star(scr, fbox.x + SS.U(20), fbox.centery, SS.U(8), C.GOLD if on else C.DIM, filled=bool(on))
+    flabel = f"{t('Избранное')} [{keymap.label('fav_filter')}]"
+    S.blit_text(scr, S.fit(S.font(15, True), flabel, fbox.w - SS.U(50)), flabel,
+                C.GOLD if on else (190, 190, 210), fbox.centerx + SS.U(12), fbox.centery)
     label = f"{t('Сортировка')}: {ui['sort']}  [{keymap.label('sort')}]"
     S.blit_text(scr, S.fit(S.font(15, True), label, box2.w - SS.U(16)), label,
                 C.WHITE if hov else (190, 190, 210), box2.centerx, box2.centery)
@@ -536,7 +590,10 @@ def _draw_list(entries, stats, colors, sel, top, bg, back_btn, random_btn, mouse
         count, state, *rest = stats.get(val, (0, 0, None))
         rank = rest[0] if rest else None
         col = C.WHITE if active else (190, 190, 210)
-        scr.blit(S.font(18, True).render(songs.display_title(val), True, col), (row.x + SS.U(14), row.y + SS.U(4)))
+        title_surf = S.font(18, True).render(songs.display_title(val), True, col)
+        scr.blit(title_surf, (row.x + SS.U(14), row.y + SS.U(4)))
+        if ui is not None and val in ui.get("fav", ()):
+            S.draw_star(scr, row.x + SS.U(14) + title_surf.get_width() + SS.U(16), row.y + SS.U(15), SS.U(7), C.GOLD)
         scr.blit(S.font(14).render(f"{t('чартов')}: {count}", True, C.GREY), (row.x + SS.U(14), row.y + SS.U(26)))
         right = row.right - SS.U(12)
         right = _rank_badge(scr, right, row.y + SS.U(5), rank, SS.U(34))
@@ -558,7 +615,7 @@ def _draw_list(entries, stats, colors, sel, top, bg, back_btn, random_btn, mouse
 
 
 def _draw_charts(song, dur, charts, sel, top, chart_btns, mouse, frame, toast, cover=None,
-                 chart_ranks=None, song_rank=None):
+                 chart_ranks=None, song_rank=None, chart_favs=None):
     scr = pygame.display.get_surface()
     scr.fill((0, 0, 0))
     if cover is not None:
@@ -589,6 +646,9 @@ def _draw_charts(song, dur, charts, sel, top, chart_btns, mouse, frame, toast, c
         name_surf = S.font(16, True).render(ch.name, True, col)
         scr.blit(name_surf, (row.x + SS.U(14), row.y + SS.U(2)))
         sx = row.x + SS.U(14) + name_surf.get_width() + SS.U(14)
+        if chart_favs and idx < len(chart_favs) and chart_favs[idx]:
+            S.draw_star(scr, sx + SS.U(6), row.y + SS.U(12), SS.U(7), (255, 255, 255))
+            sx += SS.U(24)
         for k in range(5):
             S.draw_star(scr, sx + k * SS.U(16) + SS.U(6), row.y + SS.U(12), SS.U(6), C.GOLD if k < ch.difficulty else C.DIM,
                         filled=k < ch.difficulty)

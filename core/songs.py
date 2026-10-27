@@ -1,5 +1,6 @@
 
 #-- Импорт
+import copy
 import json
 import math
 import os
@@ -10,6 +11,8 @@ import pygame
 import autochart
 import chart as chartmod
 import config as C
+import jsonio
+import validation as V
 
 SONG_DIR = C.root("songs")
 CHART_DIR = C.root("data", "charts")
@@ -17,6 +20,8 @@ INFO_DIR = C.root("data", "songinfo")
 META_DIR = C.root("data", "songmeta")
 LEGACY_CHART = C.root("data", "chart.json")
 EXTS = (".ogg", ".mp3", ".wav")
+BACKUP_DIR = C.root("data", "backups", "charts")
+CHART_BACKUPS = 5
 
 
 def list_songs():
@@ -32,22 +37,14 @@ def title(song):
 
 def meta(song):
     path = os.path.join(META_DIR, _safe(song) + ".json")
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
-        return {}
+    data = jsonio.load(path, {}, expect=dict)
+    return data if isinstance(data, dict) else {}
 
 
 def save_meta(song, data):
-    os.makedirs(META_DIR, exist_ok=True)
     path = os.path.join(META_DIR, _safe(song) + ".json")
     clean = {k: str(v).strip() for k, v in data.items() if str(v).strip()}
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(clean, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, path)
+    jsonio.write_atomic(path, clean)
 
 
 def update_meta(song, **fields):
@@ -70,6 +67,59 @@ def _safe(text):
     return "".join(keep)[:40] or "song"
 
 
+_chart_cache = {}           # путь -> (подпись файла, clean, report): список песен не перечитывает JSON каждый раз
+
+
+def _signature(path):
+    try:
+        st = os.stat(path)
+        return (st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
+
+
+def _image_exists(name):
+    return os.path.isfile(os.path.join(C.root("images"), name))
+
+
+def load_chart_file(path, check_resources=False):
+    """Загружает чарт с проверкой. Возвращает (chart | None, report); исключений не бросает."""
+    sig = _signature(path)
+    if sig is None:
+        rep = V.Report("chart")
+        rep.error("json.missing")
+        return None, rep
+    hit = _chart_cache.get(path)
+    if hit and hit[0] == sig and not check_resources:
+        _, clean, rep = hit
+        if clean is None:
+            return None, rep
+        return chartmod.Chart.from_clean(clean, path=path, report=rep), rep
+    exists = _image_exists if check_resources else None
+    res = jsonio.read(path)
+    if not res.ok:
+        rep = V.Report("chart")
+        code = {jsonio.MISSING: "json.missing", jsonio.ACCESS: "json.access"}.get(res.kind, "json.syntax")
+        rep.error(code, detail=res.message)
+        clean = None
+    else:
+        clean, rep = V.check_chart(res.data, image_exists=exists)
+    if not check_resources:
+        if len(_chart_cache) > 2000:
+            _chart_cache.clear()
+        _chart_cache[path] = (sig, clean, rep)
+    if clean is None:
+        return None, rep
+    return chartmod.Chart.from_clean(clean, path=path, report=rep), rep
+
+
+def forget_cached(path=None):
+    if path is None:
+        _chart_cache.clear()
+    else:
+        _chart_cache.pop(path, None)
+
+
 def charts_for(song):
     result = []
     if not os.path.isdir(CHART_DIR):
@@ -77,12 +127,8 @@ def charts_for(song):
     for fname in os.listdir(CHART_DIR):
         if not fname.endswith(".json"):
             continue
-        path = os.path.join(CHART_DIR, fname)
-        try:
-            ch = chartmod.Chart.load(path)
-        except Exception:
-            continue
-        if ch.song == song:
+        ch, _ = load_chart_file(os.path.join(CHART_DIR, fname))
+        if ch is not None and ch.song == song:
             result.append(ch)
     result.sort(key=lambda c: c.name.lower())
     return result
@@ -98,24 +144,31 @@ def new_chart(song, name=None):
     return chartmod.Chart(song=song, name=final)
 
 
-def save_chart(ch):
-    os.makedirs(CHART_DIR, exist_ok=True)
+def save_chart(ch, backup=True):
+    """Сохраняет чарт атомарно. Прежняя версия файла уходит в data/backups/charts (последние 5).
+
+    Бросает jsonio.SaveError, если записать не удалось; старый файл при этом остаётся целым."""
     if ch.path is None:
         ch.path = os.path.join(CHART_DIR, f"{_safe(ch.song)}__{secrets.token_hex(4)}.json")
     ch.sort()
-    tmp = ch.path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(ch.to_dict(), f, ensure_ascii=False, indent=1)
-    os.replace(tmp, ch.path)
+    data = ch.to_dict()
+    if backup and os.path.isfile(ch.path):
+        jsonio.backup_file(ch.path, os.path.join(BACKUP_DIR, os.path.splitext(os.path.basename(ch.path))[0]),
+                           keep=CHART_BACKUPS)
+    jsonio.write_atomic(ch.path, data)
+    forget_cached(ch.path)
     return ch.path
 
 
 def delete_chart(ch):
     if ch.path and os.path.exists(ch.path):
+        jsonio.backup_file(ch.path, os.path.join(BACKUP_DIR, os.path.splitext(os.path.basename(ch.path))[0]),
+                           keep=CHART_BACKUPS, tag=".deleted")
         try:
             os.remove(ch.path)
         except OSError:
             pass
+        forget_cached(ch.path)
         forget_rank(ch)
 
 
@@ -123,13 +176,9 @@ def info(song):
     os.makedirs(INFO_DIR, exist_ok=True)
     cache = os.path.join(INFO_DIR, _safe(song) + ".json")
     if os.path.exists(cache):
-        try:
-            with open(cache, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if data.get("duration_ms"):
-                return data
-        except Exception:
-            pass
+        data = jsonio.load(cache, None, expect=dict)
+        if data and data.get("duration_ms"):
+            return data
     data = None
     if autochart.AVAILABLE:
         data = autochart.energy_only(song_path(song))
@@ -139,11 +188,7 @@ def info(song):
         except Exception:
             length = 0.0
         data = {"duration_ms": int(length * 1000), "energy": [], "energy_fps": 21.5}
-    try:
-        with open(cache, "w", encoding="utf-8") as f:
-            json.dump(data, f)
-    except OSError:
-        pass
+    jsonio.try_write(cache, data, indent=None)
     return data
 
 
@@ -152,13 +197,14 @@ def migrate_legacy():
         return
     if charts_for("game.ogg"):
         return
-    try:
-        with open(LEGACY_CHART, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception:
+    data = jsonio.load(LEGACY_CHART, None, expect=dict, quarantine_bad=False)
+    if not data:
         return
-    ch = chartmod.Chart.from_dict({"song": "game.ogg", "name": "Авто", "notes": data.get("notes", [])})
-    save_chart(ch)
+    try:
+        ch = chartmod.Chart.from_dict({"song": "game.ogg", "name": "Авто", "notes": data.get("notes", [])})
+        save_chart(ch)
+    except (chartmod.ChartFormatError, jsonio.SaveError):
+        return
 
 
 #-- Обложки, авторы и цвета
@@ -206,11 +252,8 @@ def cover_surface(song):
 
 
 def _read_json(path, default):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return default
+    data = jsonio.load(path, None)
+    return default if data is None else data
 
 
 _json_cache = {}
@@ -218,10 +261,8 @@ _json_cache = {}
 
 def _read_json_cached(path, default):
     """Чтение с кэшем по времени изменения: файлы побед и рангов читаются в каждом кадре списка."""
-    try:
-        st = os.stat(path)
-        sig = (st.st_mtime_ns, st.st_size)
-    except OSError:
+    sig = _signature(path)
+    if sig is None:
         return default
     hit = _json_cache.get(path)
     if hit and hit[0] == sig:
@@ -233,11 +274,7 @@ def _read_json_cached(path, default):
 
 def _write_json(path, data):
     _json_cache.pop(path, None)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, path)
+    jsonio.write_atomic(path, data)
 
 
 def author_of(song):
@@ -270,7 +307,7 @@ def set_author_color(author, rgb):
 
 def _won_set():
     raw = _read_json_cached(WINS_PATH, [])
-    return set(raw) if isinstance(raw, list) else set()
+    return set(V.check_str_list(raw)[0])
 
 
 def is_won(ch):
@@ -335,30 +372,32 @@ def export_files():
     return sorted(f for f in os.listdir(EXPORT_DIR) if f.lower().endswith(".json"))
 
 
+class ImportFailure(ValueError):
+    """Импорт не удался: reason — bad_file / no_song / bad_format / newer_version."""
+
+    def __init__(self, reason, report=None):
+        self.reason = reason
+        self.report = report
+        super().__init__(reason)
+
+
 def import_chart(file_name):
-    """Импорт из exports/ как нового чарта. Возвращает чарт (уже сохранён) или ValueError с причиной."""
+    """Импорт из exports/ как нового чарта. Возвращает чарт (уже сохранён) или ImportFailure с причиной."""
     path = os.path.join(EXPORT_DIR, file_name)
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, ValueError):
-        raise ValueError("bad_file")
-    if not isinstance(data, dict) or not data.get("song"):
-        raise ValueError("bad_file")
-    if not os.path.isfile(song_path(str(data["song"]))):
-        raise ValueError("no_song")
-    ch = chartmod.Chart.from_dict(data)
-    ch.path = None
-    ch.name = (ch.name or "Чарт") + " (импорт)"
+    res = jsonio.read(path)
+    if not res.ok or not isinstance(res.data, dict) or not res.data.get("song"):
+        raise ImportFailure("bad_file")
+    if not os.path.isfile(song_path(str(res.data["song"]))):
+        raise ImportFailure("no_song")
+    clean, rep = V.check_chart(res.data, image_exists=_image_exists)
+    if clean is None:
+        reason = "newer_version" if rep.has_code("chart.version_new") else "bad_format"
+        raise ImportFailure(reason, rep)
+    ch = chartmod.Chart.from_clean(clean, path=None, report=rep)
+    ch.id = ""                                   # импорт — новый чарт, прежний идентификатор не переносим
+    ch.name = ((ch.name or "Чарт") + " (импорт)")[:V.NAME_MAX]
     save_chart(ch)
     return ch
-
-
-def autosave_chart(ch):
-    """Автосохранение: data/autosave/<название чарта>-autosave.json (в список чартов не попадает)."""
-    path = os.path.join(AUTOSAVE_DIR, _file_stem(ch.name) + "-autosave.json")
-    _write_json(path, ch.to_dict())
-    return path
 
 
 #-- Ранги: лучший результат на чарт и общий ранг песни

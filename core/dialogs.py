@@ -183,3 +183,67 @@ def choose(clock, title, options):
         for i, btn in enumerate(buttons):
             btn.draw(scr, mouse, active=i == sel)
         _end_frame(scr, frame)
+
+
+def info_lines(clock, title, lines, accent=None, buttons=None, footer=""):
+    """Окно со списком строк (с прокруткой) и кнопками. Возвращает индекс нажатой кнопки или None (ESC).
+
+    Используется для отчётов проверки чарта, окна восстановления и подобных сообщений."""
+    accent = accent or C.CYAN
+    buttons = buttons or [t("ОК")]
+    snap = _snapshot()
+    box = pygame.Rect(0, 0, SS.U(820), SS.U(520))
+    box.center = (C.WIDTH // 2, C.HEIGHT // 2)
+    text_area = pygame.Rect(box.x + SS.U(30), box.y + SS.U(70), box.w - SS.U(60), box.h - SS.U(160))
+    fnt = S.font(15)
+    wrapped = []
+    for line in lines:
+        wrapped += _wrap(fnt, line, text_area.w) or [""]
+    row_h = fnt.get_linesize() + SS.U(2)
+    visible = max(1, text_area.h // row_h)
+    top = 0
+    bw = min(SS.U(210), (box.w - SS.U(60)) // max(1, len(buttons)) - SS.U(10))
+    total = len(buttons) * bw + (len(buttons) - 1) * SS.U(10)
+    x0 = box.centerx - total // 2
+    btns = [S.Btn((x0 + i * (bw + SS.U(10)), box.bottom - SS.U(62), bw, SS.U(42)), label,
+                  accent if i == 0 else C.PURPLE_LIGHT, S.font(14, True)) for i, label in enumerate(buttons)]
+    sel, frame = 0, 0
+    while True:
+        display.tick(clock)
+        frame += 1
+        mouse = pygame.mouse.get_pos()
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if ev.type == pygame.KEYDOWN:
+                if ev.key == pygame.K_ESCAPE:
+                    return None
+                if ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                    return sel
+                if ev.key in (pygame.K_LEFT, pygame.K_a):
+                    sel = max(0, sel - 1)
+                elif ev.key in (pygame.K_RIGHT, pygame.K_d, pygame.K_TAB):
+                    sel = min(len(btns) - 1, sel + 1)
+                elif ev.key == pygame.K_UP:
+                    top = max(0, top - 1)
+                elif ev.key == pygame.K_DOWN:
+                    top = min(max(0, len(wrapped) - visible), top + 1)
+            elif ev.type == pygame.MOUSEWHEEL:
+                top = max(0, min(max(0, len(wrapped) - visible), top - ev.y * 2))
+            elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                for i, b in enumerate(btns):
+                    if b.hovered(ev.pos):
+                        return i
+        scr = _begin_frame(snap, frame, box, accent)
+        S.glitch_title(scr, S.font(22, True), title, accent, box.centerx, box.y + SS.U(36), frame)
+        for i, line in enumerate(wrapped[top:top + visible]):
+            scr.blit(fnt.render(line, True, (200, 200, 220)), (text_area.x, text_area.y + i * row_h))
+        if len(wrapped) > visible:
+            S.blit_text(scr, S.font(12), f"{top + 1}–{min(len(wrapped), top + visible)} / {len(wrapped)}  ↑↓",
+                        C.GREY, box.right - SS.U(80), box.bottom - SS.U(86))
+        if footer:
+            S.blit_text(scr, S.font(12), footer, C.GREY, box.centerx, box.bottom - SS.U(88))
+        for i, b in enumerate(btns):
+            b.draw(scr, mouse, active=(i == sel))
+        _end_frame(scr, frame)

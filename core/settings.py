@@ -1,11 +1,10 @@
 
 #-- Импорт
-import json
-import os
-
 import pygame
 
 import config as C
+import jsonio
+import validation as V
 
 PATH = C.root("data", "settings.json")
 
@@ -19,6 +18,8 @@ DEFAULTS = {
     "fullscreen": 0,
     "resolution": "1280x720",
     "preview": 1,
+    "ghost": 1,
+    "autosave": 1,
     "media_dim": 45,
     "keys": {},
 }
@@ -32,21 +33,15 @@ LIMITS = {
 }
 
 _data = None
+load_report = V.Report("settings")      # итог проверки settings.json при запуске (для диагностики)
 
 
 def _load():
-    global _data
+    global _data, load_report
     if _data is None:
-        _data = dict(DEFAULTS)
-        try:
-            with open(PATH, "r", encoding="utf-8") as f:
-                raw = json.load(f)
-            if isinstance(raw, dict):
-                for key in DEFAULTS:
-                    if key in raw:
-                        _data[key] = raw[key]
-        except Exception:
-            pass
+        raw = jsonio.load(PATH, None, expect=dict)      # битый файл уходит в карантин, а не затирается
+        _data, load_report = V.check_settings(raw, DEFAULTS, LIMITS)
+        _data = dict(_data)
         _sanitize()
     return _data
 
@@ -56,7 +51,7 @@ def _sanitize():
     for key, (lo, hi, _) in LIMITS.items():
         try:
             d[key] = int(max(lo, min(hi, int(d[key]))))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             d[key] = DEFAULTS[key]
     keys = d.get("lane_keys")
     if not (isinstance(keys, list) and len(keys) == 4 and all(isinstance(k, str) and k for k in keys)):
@@ -70,7 +65,10 @@ def _sanitize():
     else:
         d["keys"] = {}
     d["fullscreen"] = 1 if d.get("fullscreen") in (1, True) else 0
-    d["preview"] = 1 if d.get("preview") in (1, True) else 0
+    for flag in ("preview", "ghost", "autosave"):
+        d[flag] = 1 if d.get(flag) in (1, True) else 0
+    if not isinstance(d.get("resolution"), str):
+        d["resolution"] = DEFAULTS["resolution"]
 
 
 def get(key):
@@ -111,9 +109,5 @@ def reset():
 
 
 def save():
-    try:
-        os.makedirs(os.path.dirname(PATH), exist_ok=True)
-        with open(PATH, "w", encoding="utf-8") as f:
-            json.dump(_load(), f, ensure_ascii=False, indent=2)
-    except OSError:
-        pass
+    ok, _ = jsonio.try_write(PATH, _load(), indent=2)
+    return ok

@@ -19,13 +19,15 @@ ROW1_Y, ROW2_Y, ROW3_Y, ROW4_Y, BTN_H = 54, 96, 138, 180, 32
 LIST_X, LIST_Y, ROW, LIST_W = 16, 226, 28, 380
 PANEL_X = 440
 FIELD_Y, FIELD_STEP = 226, 30
+FIELD_STEP_TIGHT = 27          # строк больше 11 (ролик с «на весь экран»): чуть теснее, чтобы влезли над подсказкой
 MAX_T_SHOWN = 8
 MAX_FOLDERS = 8
 PREVIEW_BG_MS = 1500
 PREVIEW_PAUSE_MS = 500
 HOLD_DELAY = 0.35
 HOLD_RATE = 0.06
-NO_EDIT = ("file", "anim", "orig")
+NO_EDIT = ("file", "anim", "orig", "full")
+FULL_IGNORED = ("w", "h", "x", "y", "dx", "dy")     # при «на весь экран» размер и смещение не используются
 LOCKED_MSG = "Событие заблокировано: нажмите РАЗМКНУТЬ, чтобы изменить"
 FOLDER_LOCKED_MSG = "Папка заблокирована: сначала разблокируйте её"
 
@@ -53,6 +55,7 @@ HINTS = {
     "y": "Сдвиг картинки от центра экрана по вертикали",
     "dx": "На сколько картинка сместится за время показа (для ДВИЖЕНИЯ)",
     "dy": "На сколько картинка сместится по вертикали (для ДВИЖЕНИЯ)",
+    "full": "ДА — картинка или ролик растягиваются на весь экран (пропорции не сохраняются, размер и смещение не используются)",
     "file": "Файл из папки images/, стрелки перебирают список",
     "anim": "РЕЗКО — появилась и пропала; ПЛАВНО — с затуханием; ДВИЖЕНИЕ — плывёт",
     "r": "Красная составляющая фона, 0–255",
@@ -219,7 +222,8 @@ class EventsScreen:
         rows += [(k, lbl, lo, hi, st) for k, lbl, lo, hi, st, _ in EV.FIELDS[ev["type"]]]
         if ev["type"] in ("image", "video"):
             rows += [("file", t("Ролик (images/)") if ev["type"] == "video" else t("Картинка (images/)"), None, None, None),
-                     ("anim", t("Анимация"), None, None, None)]
+                     ("anim", t("Анимация"), None, None, None),
+                     ("full", t("Растянуть на весь экран"), None, None, None)]
         if ev["type"] == "bg":
             rows += [("orig", t("Исходный цвет фона"), None, None, None)]
         if ev["type"] == "card":
@@ -234,6 +238,8 @@ class EventsScreen:
             return t(EV.ANIM_NAMES[ev["anim"]])
         if key == "orig":
             return t("ДА") if ev["orig"] else t("НЕТ")
+        if key == "full":
+            return t("ДА") if ev.get("full") else t("НЕТ")
         if key == "text":
             return ev["text"]
         if key == "t":
@@ -250,6 +256,9 @@ class EventsScreen:
             ev["anim"] = EV.cycle(EV.ANIMS, ev["anim"], direction)
         elif key == "orig":
             ev["orig"] = not ev["orig"]
+        elif key == "full":
+            ev["full"] = not ev.get("full", False)
+            self.status = t("На весь экран: ДА") if ev["full"] else t("На весь экран: НЕТ")
         elif lo is not None and step is not None:
             self._set_value(key, ev[key] + direction * step, lo, hi)
 
@@ -261,12 +270,15 @@ class EventsScreen:
         elif key in ("r", "g", "b"):
             ev["orig"] = False
 
+    def _fstep(self):
+        return FIELD_STEP_TIGHT if len(self._fields()) > 11 else FIELD_STEP
+
     def _row_at(self, pos):
         dx, dy = _design(pos)
         if not (PANEL_X <= dx <= PANEL_X + 380):
             return None
         for i in range(len(self._fields())):
-            y = FIELD_Y + i * FIELD_STEP
+            y = FIELD_Y + i * self._fstep()
             if y <= dy < y + 24:
                 return i
         return None
@@ -593,7 +605,7 @@ class EventsScreen:
         return None
 
     def _reset_rect(self):
-        y = FIELD_Y + len(self._fields()) * FIELD_STEP + 6
+        y = FIELD_Y + len(self._fields()) * self._fstep() + 6
         return pygame.Rect(PANEL_X, y, 200, 30)  # расчётные координаты
 
     #-- Просмотр
@@ -796,7 +808,7 @@ class EventsScreen:
                 self._select_row(rows[self.top + i])
                 return None
         for i, (key, _, lo, hi, step) in enumerate(self._fields()):
-            y = FIELD_Y + i * FIELD_STEP
+            y = FIELD_Y + i * self._fstep()
             if pygame.Rect(PANEL_X, y, 200, 24).collidepoint(pos):
                 self.field = i
             elif pygame.Rect(PANEL_X + 340, y, 22, 24).collidepoint(pos):
@@ -930,17 +942,18 @@ class EventsScreen:
             S.blit_text(scr, S.font(16), t("Выберите событие слева или добавьте новое"),
                         C.GREY, u(PANEL_X + 240), u(FIELD_Y + 20))
         for i, (key, label, row_lo, _, _) in enumerate(fields):
-            y = FIELD_Y + i * FIELD_STEP
+            y = FIELD_Y + i * self._fstep()
             active = i == self.field
             if active:
                 pygame.draw.rect(scr, (40, 40, 70), SS.UR(PANEL_X - 8, y - 1, 720, 26), border_radius=u(6))
-            scr.blit(S.font(13, active).render(t(label), True, C.WHITE if active else C.GREY),
-                     SS.UP(PANEL_X, y + 5))
+            unused = bool(self.cur is not None and self.cur.get("full") and key in FULL_IGNORED)
+            scr.blit(S.font(13, active).render(t(label), True, C.WHITE if active and not unused else
+                                               C.DIM if unused else C.GREY), SS.UP(PANEL_X, y + 5))
             if self.edit_key == key:
                 caret = "_" if (self.frame // 30) % 2 == 0 else " "
                 value = S.font(13, True).render(self.edit_buf + caret, True, C.GOLD)
             else:
-                value = S.font(13, True).render(self._value_text(key)[:18], True, C.CYAN)
+                value = S.font(13, True).render(self._value_text(key)[:18], True, C.DIM if unused else C.CYAN)
             scr.blit(value, (u(PANEL_X + 432) - value.get_width() // 2, u(y + 5)))
             if row_lo is not None:
                 S.draw_disc(scr, u(PANEL_X + 351), u(y + 12), u(16))

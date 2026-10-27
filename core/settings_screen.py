@@ -16,7 +16,7 @@ import settings
 import style as S
 from i18n import t
 
-ROW_H = 31
+ROW_H = 29
 ACTION_H = 40
 ACTION_GAP = 14
 TOP = 96
@@ -35,6 +35,8 @@ ROWS = (
     ("fullscreen", "Экран", "switch"),
     ("resolution", "Разрешение", "res"),
     ("preview", "Предпрослушивание песен", "switch"),
+    ("ghost", "Призрак лучшего прохода", "switch"),
+    ("autosave", "Автосохранение редактора", "switch"),
     ("media_dim", "Затемнение картинок и роликов", "num"),
     ("lang", "Язык", "lang"),
     ("reset", "Сбросить настройки", "action"),
@@ -52,8 +54,8 @@ def _value_text(kind_key, idx):
     if kind_key == "resolution":
         w, h = SS.size(SS.current())
         return f"{w} × {h}"
-    if kind_key == "preview":
-        return t("Вкл") if settings.get("preview") else t("Выкл")
+    if kind_key in ("preview", "ghost", "autosave"):
+        return t("Вкл") if settings.get(kind_key) else t("Выкл")
     if kind_key.startswith("key"):
         return settings.key_label(settings.get("lane_keys")[int(kind_key[3])]).upper()
     if kind_key == "latency_ms":
@@ -200,8 +202,8 @@ def _cycle_resolution(direction):
 def _toggle(key):
     if key == "fullscreen":
         display.toggle()
-    elif key == "preview":
-        settings.set("preview", 0 if settings.get("preview") else 1)
+    elif key in ("preview", "ghost", "autosave"):
+        settings.set(key, 0 if settings.get(key) else 1)
 
 
 def _adjust(idx, direction):

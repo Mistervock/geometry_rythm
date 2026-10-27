@@ -16,9 +16,9 @@ TYPE_COLORS = {"glitch": C.RED_LIGHT, "flash": C.WHITE, "image": C.GOLD, "bg": (
 DESCRIPTIONS = {
     "glitch": "Экран дрожит и рвётся на полосы. Сила и длительность настраиваются.",
     "flash": "Белая вспышка: появляется за «скорость появления» и гаснет за «длительность».",
-    "image": "Картинка из папки images/ появляется в центре, может двигаться и плавно исчезать.",
+    "image": "Картинка из папки images/ появляется в центре, может двигаться и плавно исчезать. Можно растянуть на весь экран.",
     "bg": "Меняет цвет фона. Кнопка «ВЕРНУТЬ ФОН» возвращает исходный цвет.",
-    "video": "Ролик из папки images/ на заданное время. «ПОДОГНАТЬ» вписывает его в экран.",
+    "video": "Ролик из папки images/ на заданное время. «ПОДОГНАТЬ» вписывает его в экран, «Растянуть на весь экран» заполняет весь экран.",
     "heal": "Белый круг падает быстрее нот. Поймать нажатием клавиши — +1 HP, промах — только глитч, без урона.",
     "card": "Текст на экране на заданное время. Плавно появляется и исчезает. Текст меняется в поле «Текст».",
     "invert": "На заданное время весь экран становится негативом. Длительность настраивается.",
@@ -84,6 +84,7 @@ def _defaults(kind):
     if kind in ("image", "video"):
         ev["file"] = ""
         ev["anim"] = "fade"
+        ev["full"] = False                     # растянуть на весь экран
     if kind == "bg":
         ev["orig"] = False
     if kind == "card":
@@ -103,7 +104,7 @@ def make(kind, t):
 def _num(v, lo, hi, default):
     try:
         v = int(round(float(v)))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return default
     return max(lo, min(hi, v))
 
@@ -121,6 +122,7 @@ def normalize(raw):
     if kind in ("image", "video"):
         ev["file"] = str(raw.get("file", ""))[:120]
         ev["anim"] = raw.get("anim") if raw.get("anim") in ANIMS else "fade"
+        ev["full"] = raw.get("full") is True or raw.get("full") in (1, "1", "true", "True")
     if kind == "bg":
         ev["orig"] = bool(raw.get("orig", False))
     if kind == "card":
@@ -171,10 +173,11 @@ _src = {}
 _scaled = {}
 
 
-def image_surface(name, width, bright=1.0):
+def image_surface(name, width, bright=1.0, height=None):
+    """Картинка масштабом по ширине (высота по пропорциям) или точно width × height (height задана)."""
     if not name:
         return None
-    key = (name, width, bright)
+    key = (name, width, height, bright)
     surf = _scaled.get(key)
     if surf is not None:
         return surf
@@ -186,8 +189,8 @@ def image_surface(name, width, bright=1.0):
     src = _src[name]
     if src is None:
         return None
-    h = max(1, round(src.get_height() * width / src.get_width()))
-    surf = pygame.transform.smoothscale(src, (width, h))
+    h = height if height else max(1, round(src.get_height() * width / src.get_width()))
+    surf = pygame.transform.smoothscale(src, (max(1, width), max(1, h)))
     if bright < 1.0:
         c = int(255 * bright)
         surf.fill((c, c, c), special_flags=pygame.BLEND_RGB_MULT)
@@ -216,6 +219,15 @@ def flash_alpha(ev, elapsed):
     return _clamp01(1.0 - (elapsed - ev["attack"]) / ev["dur"])
 
 
+def media_size(ev):
+    """Размер показа в пикселях экрана: (ширина, высота). Высота картинки None — по пропорциям."""
+    if ev.get("full"):
+        return C.WIDTH, C.HEIGHT
+    if ev["type"] == "video":
+        return SS.U(ev["w"]), SS.U(ev.get("h", 0))
+    return SS.U(ev["w"]), None
+
+
 def image_state(ev, elapsed):
     dur = ev["dur"]
     if elapsed < 0 or elapsed >= dur:
@@ -226,6 +238,8 @@ def image_state(ev, elapsed):
     else:
         alpha = _clamp01(min(elapsed / fade, (dur - elapsed) / fade))
     p = elapsed / dur
+    if ev.get("full"):
+        return alpha, 0, 0                     # на весь экран: не двигается и не смещается
     if ev["anim"] == "drift":
         p = p * p * (3 - 2 * p)
         return alpha, ev["x"] + ev["dx"] * p, ev["y"] + ev["dy"] * p
@@ -299,7 +313,8 @@ def prewarm(events_list):
         if not ev.get("file"):
             continue
         if ev["type"] == "image":
-            image_surface(ev["file"], SS.U(ev["w"]), media_bright())
+            w, h = media_size(ev)
+            image_surface(ev["file"], w, media_bright(), h)
         elif ev["type"] == "video":
             path = os.path.join(IMAGE_DIR, ev["file"])
             video.prepare(path, (path, ev["t"]))
@@ -356,12 +371,12 @@ def draw_media(surface, ev, elapsed):
     if alpha <= 0 or not ev.get("file"):
         return
     bright = media_bright()
-    w, h = SS.U(ev["w"]), SS.U(ev.get("h", 0))
+    w, h = media_size(ev)
     if ev["type"] == "video":
         path = os.path.join(IMAGE_DIR, ev["file"])
         img = video.frame(path, (path, ev["t"]), elapsed, w, h, bright)
     else:
-        img = image_surface(ev["file"], w, bright)
+        img = image_surface(ev["file"], w, bright, h)
     if img is None:
         return
     img.set_alpha(int(255 * alpha))

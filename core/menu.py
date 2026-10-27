@@ -13,7 +13,7 @@ import screen_setting as SS
 import style as S
 from i18n import t
 
-ITEMS = (("songs", "ПЕСНИ"), ("records", "РЕКОРДЫ"), ("achievements", "ДОСТИЖЕНИЯ"),
+ITEMS = (("songs", "ПЕСНИ"), ("history", "ИСТОРИЯ"), ("records", "РЕКОРДЫ"), ("achievements", "ДОСТИЖЕНИЯ"),
          ("settings", "НАСТРОЙКИ"), ("quit", "ВЫХОД"))
 BEAT_MS = 500
 BETA_ANGLE = 8
