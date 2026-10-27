@@ -2,11 +2,11 @@
 
 <p align="center">
   <strong>A geometric rhythm game inspired by Friday Night Funkin' and Geometry Catcher.</strong><br>
-  <a href="#english">English</a> · <a href="#русский">Русский</a> · <a href="https://github.com/Mistervock/geometry_rythm/releases">Releases / Скачать</a>
+  <a href="#english">English</a> · <a href="#русский">Русский</a> · <a href="https://github.com/Mistervock/geometry_rythm/releases">Releases / Релизы</a>
 </p>
 
 <p align="center">
-  <strong>Version 0.2 · HD 1280 × 720 · Python + Pygame</strong>
+  <strong>Version 0.2 · HD 1280 × 720 / Full HD 1920 × 1080 · Python + Pygame</strong>
 </p>
 
 ---
@@ -19,18 +19,21 @@ The project is inspired by **Friday Night Funkin'** and the geometric style of *
 
 ### Features
 
-- **HD layout:** 1280 × 720 game resolution with an optional scaled fullscreen mode.
-- **Four geometric lanes:** each lane has its own shape and colour. Default keys: **D**, **F**, **J**, **K**.
+- **HD and Full HD display:** selectable 1280 × 720 and 1920 × 1080 resolutions, with a windowed or scaled fullscreen mode.
+- **Four geometric lanes:** each lane has its own shape and colour. Default gameplay keys: **D**, **F**, **J**, **K**.
 - **Tap notes and hold notes:** hit notes at the right moment and keep holding for the full duration of long notes.
-- **Scoring and health:** timing judgements, combo multipliers up to ×4, a 5 HP health bar, accuracy, grades, and a results screen.
-- **Song browser:** browse tracks, listen to automatic previews, or start a random song. Preview playback can be disabled in Settings.
-- **Custom song and chart metadata:** set a song title and artist, and give each chart an author and a 1–5 star difficulty rating.
-- **Chart editor:** place notes by mouse, record them during playback, edit hold lengths, undo changes, snap to a grid, and change editor playback speed.
-- **Automatic chart generation:** analyse a song's audio with NumPy to create an editable first draft.
+- **Scoring, ranks, and health:** timing judgements, combo multipliers up to ×4, 5 HP, accuracy, grades, results, per-chart best ranks (**D–S**), and overall song ranks.
+- **Song browser:** song covers, artist-grouped lists, search, sorting by title/rank/chart count, track previews, and random selection.
+- **Song and chart metadata:** set a song title, artist, cover image, chart author, 1–5 star difficulty, and an optional achievement awarded for completing that chart.
+- **Chart editor:** place or record notes, edit hold lengths, undo, snap to a grid, adjust editor playback speed, and view an on-screen shortcut guide.
+- **Automatic chart generation:** analyse audio with NumPy and choose **Easy**, **Normal**, or **Hard** note density before generating an editable draft.
+- **Chart safety and sharing:** periodic autosave snapshots plus JSON chart import/export.
 - **Timeline events:** glitches, flashes, background changes, images, videos, heal pickups, text cards, and screen-colour inversion.
-- **Event folders:** group related events, sort the list by time or type, and lock individual events or whole folders against accidental edits.
-- **Achievement cards:** create, edit, view, and delete custom achievement entries with a name, description, and image.
-- **Settings:** remappable lane keys, audio latency, note speed, volume controls, fullscreen mode, language, preview playback, and media dimming.
+- **Event folders:** group related events, sort by time or type, and lock individual events or whole folders against accidental edits.
+- **Achievement progression:** create custom achievement cards and assign one to a chart; completing that chart without failing unlocks the assigned achievement.
+- **Customisable controls:** remap the four gameplay lanes and keyboard actions for menus, the song list, and the chart editor.
+- **Developer tools:** edit song/chart metadata and set artist-group colours from Developer Mode.
+- **Settings and diagnostics:** audio latency, note speed, volume, fullscreen mode, resolution, language, song previews, media dimming, and an optional FPS counter.
 
 ### Requirements
 
@@ -70,14 +73,22 @@ You can remap the lane keys in Settings. The default health is 5 HP. Missing a n
 
 ### Songs and charts
 
-Put music files in **songs/**. Supported formats are **.ogg**, **.mp3**, and **.wav**. The repository includes **game.ogg** as a sample track.
+Put music files in **songs/**. Supported formats are **.ogg**, **.mp3**, and **.wav**.
 
 1. Open **Songs** from the main menu.
-2. Select a song to see its charts, or use the **Random** button (or press **R** on the song list) to play a random track.
+2. Choose a track to view its charts, or use the random-selection button / **R** (default) to start a random available chart.
 3. Select a chart to play it. Use **Edit** or **New** to edit a chart or create one.
 4. Save chart changes in the editor with **Ctrl + S**.
 
-You can keep several charts for one song. Each chart can have its own name, author, and 1–5 star difficulty rating. The star rating is chart metadata; it does not automatically change the chart's note pattern.
+You can keep several charts for one song. Each chart can have its own name, author, 1–5 star difficulty, and optional achievement. The star rating is chart metadata; it does not automatically change the chart's note pattern.
+
+#### Search, sorting, ranks, and Developer Mode
+
+The song list can be searched by song title, artist, chart name, or charter. By default, press **/** or **F** to start a search, and **Tab** to cycle sorting modes: author groups, title, best rank, or number of charts. Search and sorting shortcuts can be remapped in Settings.
+
+The song and chart lists show completion and rank information. Finishing a chart without failing records a win; the game stores the best chart rank from **D** to **S** and calculates an overall song rank from its charts.
+
+Press **7** (default) in the song list to open **Developer Mode**. It provides tools for editing a song's title, artist and cover image, changing a chart's name or assigned song, and setting background colours for artist groups. This is a developer utility, not a gameplay mode.
 
 #### Song and chart metadata
 
@@ -85,16 +96,18 @@ Open a chart in the editor, press **Esc**, and choose **Song Settings**. You can
 
 - **Song title** — the title displayed in the song browser instead of the audio file name.
 - **Artist** — the performer or creator credited for the track.
+- **Cover image** — select an image from **images/** for the song-list background.
 - **Charter** — the author of the selected chart.
 - **Difficulty** — a rating from 1 to 5 stars.
+- **Achievement on win** — optionally assign a custom achievement card to this chart.
 
-Song title and artist are stored as local song metadata; charter and difficulty are stored with the chart. Save the chart after changing chart details.
+Song title, artist, and cover image are stored as local song metadata; charter, difficulty, and the assigned achievement are stored with the chart. Save the chart after changing chart details. An assigned achievement unlocks only when the chart is completed without failing; the game remembers unlocked achievement cards locally.
 
 ### Chart editor
 
 The editor works directly on the song timeline. When playback is stopped, use the mouse to place notes; while playing, press lane keys to record notes. Longer recorded presses create hold notes. Right-click a note to remove it, and use the mouse wheel over a note to adjust a hold's length. The undo history stores up to 80 steps.
 
-| Action | Controls |
+| Action | Default controls |
 | --- | --- |
 | Start or stop playback | **Space** |
 | Move by one grid step | **Left** / **Right** |
@@ -113,13 +126,27 @@ The editor works directly on the song timeline. When playback is stopped, use th
 | Shift all notes by 10 ms | **[** / **]** |
 | Open the editor menu | **Esc** |
 
-Editor playback speeds are **0.5×**, **0.75×**, **1.0×**, and **1.25×**. They only affect playback inside the editor, not gameplay speed; changing the rate also changes the audio pitch. NumPy is needed to prepare alternate-speed audio. You can also use the speed buttons in the right-hand panel.
+Editor playback speeds are **0.5×**, **0.75×**, **1.0×**, and **1.25×**. They only affect playback inside the editor, not gameplay speed; changing the rate also changes the audio pitch. NumPy is needed to prepare alternate-speed audio. The speed buttons are also available in the right-hand panel.
 
-Click the timeline bar at the top to seek. Hold **Ctrl** while using the mouse wheel to change the timeline zoom. The editor menu contains chart saving, Song Settings, the achievement editor, Auto Chart, and exit options.
+The default keyboard shortcuts can be changed in **Settings → Chart Editor Keys**. Press **F1** inside the editor to open a shortcut guide that reflects your current bindings; press any key to close it. Press **F3** on any screen to toggle the FPS counter.
+
+Click the timeline bar at the top to seek. Hold **Ctrl** while using the mouse wheel to change the timeline zoom. The editor menu contains chart saving, Song Settings, the achievement editor, chart import/export, Auto Chart, and exit options.
+
+#### Chart import, export, and autosave
+
+Choose **Export Chart** from the editor menu to save the current chart as JSON under **exports/**. **Import Chart** reads a JSON file from that folder and creates a separate chart; the song file referenced by the chart must already exist in **songs/**.
+
+When the chart has unsaved changes and playback is stopped, the editor creates an autosave snapshot approximately every **60 seconds** in **data/autosave/**. Autosaves are kept separate from the regular chart list. Use **Ctrl + S** to save the chart normally; autosave snapshots are an extra safeguard, not a replacement for manual saving.
 
 ### Automatic chart generation
 
-Choose **Auto Chart** from the editor menu. The analyser reads audio through Pygame, examines four frequency ranges, and detects stronger changes in spectral energy. It applies spacing and density limits to avoid excessive note density; sustained sounds may be converted into hold notes.
+Choose **Auto Chart** from the editor menu. Before analysis, select one of three note-density presets:
+
+- **Easy** — fewer notes and more space between them.
+- **Normal** — the standard balance of density and spacing.
+- **Hard** — denser note placement with shorter minimum gaps.
+
+The analyser reads audio through Pygame, examines four frequency ranges, and detects stronger changes in spectral energy. It applies spacing and density limits to avoid excessive note density; sustained sounds may be converted into hold notes.
 
 - Requires **numpy**.
 - Auto Chart replaces the current note list with a generated draft. Save a copy first if you need to preserve the original.
@@ -163,15 +190,17 @@ Use the **Folders** controls to create a folder, move events into or out of it, 
 
 ### Achievement cards
 
-The project includes an achievement-card catalogue and editor. Open **Achievements** from the main menu to browse the cards. To create or manage them, open a chart in the editor, press **Esc**, and choose **Achievements**.
+The project includes an achievement-card catalogue and editor. Open **Achievements** from the main menu to browse available cards. To create or manage cards, open a chart in the editor, press **Esc**, and choose **Achievements**.
 
 Each custom entry stores:
 
 - **Name** — up to 40 characters.
 - **Description** — up to 200 characters.
-- **Image** — selected from the supported images in **images/**.
+- **Image** — selected from supported images in **images/**.
 
-Entries are saved as JSON content using the **.vcld** extension in the **achievements/** folder. The project includes **images/achievement_template.png** as a visual template. This feature manages custom achievement cards; it is not an automatic challenge-unlock or progression system.
+Entries are saved as JSON content using the **.vcld** extension in **achievements/**. The project includes **images/achievement_template.png** as a visual template.
+
+To make a card unlockable, open **Song Settings** for a chart and select it under **Achievement on win**. Completing that chart without failing unlocks the assigned card; the results screen reports the unlock and the catalogue marks received cards. Local unlock state is stored in **data/achievements_unlocked.json**.
 
 ### Settings
 
@@ -180,17 +209,19 @@ The Settings screen includes:
 - Audio latency adjustment
 - Note travel speed
 - Music and sound-effect volume
-- Rebindable keys for all four lanes
+- Rebindable keys for all four gameplay lanes
+- Rebindable actions for menu/song navigation and chart editing
 - Windowed or scaled fullscreen display
+- Selectable resolution: **1280 × 720** or **1920 × 1080**
 - Automatic song previews in the song browser
 - Image and video dimming
 - English / Russian interface language
 
-Settings are stored locally in **data/settings.json**.
+Settings are stored locally in **data/settings.json**. The **F3** shortcut toggles the FPS counter and is available throughout the game.
 
 ### Chart file format
 
-Charts use JSON format version **4**. Times are measured in milliseconds. For notes, **lane** is numbered from **0** to **3**; **d** is the hold duration and is omitted for regular notes. Charts can also contain **charter**, **difficulty**, **events**, and **folders** fields.
+Charts use JSON format version **4**. Times are measured in milliseconds. For notes, **lane** is numbered from **0** to **3**; **d** is the hold duration and is omitted for regular notes. Charts can also contain **charter**, **difficulty**, **achievement** (the assigned **.vcld** filename), **events**, and **folders** fields. The achievement field is optional.
 
 ~~~json
 {
@@ -199,6 +230,7 @@ Charts use JSON format version **4**. Times are measured in milliseconds. For no
   "name": "Example chart",
   "charter": "Chart author",
   "difficulty": 3,
+  "achievement": "achievement__example.vcld",
   "notes": [
     { "t": 4000, "lane": 0 },
     { "t": 5000, "lane": 2, "d": 600 }
@@ -224,34 +256,57 @@ geometry_rythm/
 ├── main.py                     # Application entry point
 ├── requirements.txt            # Python dependencies
 ├── core/
-│   ├── game.py                 # Gameplay, scoring, health, and event playback
-│   ├── chart.py                # Notes, chart metadata, JSON loading/saving
-│   ├── editor.py               # Chart editor and playback-speed controls
-│   ├── autochart.py            # Audio analysis and automatic chart generation
+│   ├── game.py                 # Gameplay, scoring, ranks, health, and event playback
+│   ├── chart.py                # Notes, metadata, achievement link, and JSON chart format
+│   ├── editor.py               # Chart editor, autosave, and chart import/export
+│   ├── autochart.py            # Audio analysis and density presets
+│   ├── songs.py                # Songs, metadata, ranks, wins, autosaves, and chart files
+│   ├── songs_screen.py         # Song search, sorting, covers, and chart browser
+│   ├── song_settings.py        # Song/chart metadata and achievement assignment
+│   ├── settings.py             # Local settings
+│   ├── settings_screen.py      # Gameplay, display, and audio settings
+│   ├── keymap.py               # Configurable keyboard actions
+│   ├── keys_screen.py          # Menu/song/editor key bindings
+│   ├── screen_setting.py       # Resolution and layout scaling
+│   ├── dev_menu.py             # Developer tools for songs, charts, and artist colours
 │   ├── events.py               # Timeline events and media helpers
 │   ├── events_screen.py        # Event editor, folders, and event locking
-│   ├── achievements.py         # Achievement-card storage
+│   ├── achievements.py         # Achievement cards and unlock state
 │   ├── achievement_editor.py  # Create, edit, and delete achievement cards
 │   ├── achievements_screen.py # Achievement-card catalogue
 │   ├── achievements_view.py   # Achievement-card rendering
-│   ├── song_settings.py        # Song and chart metadata editor
-│   ├── display.py              # Window/fullscreen display management
+│   ├── display.py              # Window/fullscreen display and FPS counter
 │   ├── stretch.py              # Alternate-speed audio generation
 │   ├── dialogs.py              # Confirmation, text input, and selection dialogs
-│   └── ...                     # Menus, sound, results, records, translation, visuals
-├── songs/                      # Audio tracks (includes game.ogg)
-├── images/                     # Event media and achievement images
+│   └── ...                     # Menu, results, records, translation, visuals, audio, cache
+├── songs/                      # Audio tracks (.ogg, .mp3, .wav)
+├── images/                     # Song covers, event media, and achievement images
 ├── achievements/               # Custom achievement cards (*.vcld)
-└── data/                       # Charts, settings, records, and caches
+├── exports/                    # Exported/importable chart JSON files (created as needed)
+└── data/                       # Local charts, settings, records, ranks, wins, and caches
 ~~~
 
-Local generated data includes **data/charts/** for charts, **data/songmeta/** for song titles and artists, **data/songinfo/** for audio analysis, **data/cache/speed/** for alternate-speed audio, **data/settings.json** for preferences, and **data/records.json** for records.
+Local data includes **data/charts/** for charts, **data/songmeta/** for song titles/artists/covers, **data/songinfo/** for audio analysis, **data/cache/speed/** for alternate-speed audio, **data/autosave/** for chart snapshots, **data/settings.json** for preferences, **data/records.json** for score records, **data/ranks.json** for best chart ranks, **data/wins.json** for completed charts, **data/author_colors.json** for artist-group colours, and **data/achievements_unlocked.json** for unlocked achievement cards.
 
-### Windows executable
+### Windows executable and distribution
 
-Check the [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases) for downloadable Windows builds. If a release includes **GeometryRhythm.exe** or an archive, download it from the release **Assets** and follow the release notes. Unless the package specifies another layout, keep the executable beside the **songs/**, **data/**, and **images/** folders so the game can access your music, charts, settings, and media.
+There is **no prebuilt Windows .exe** available at the moment. The repository does not include an executable build script or a PyInstaller specification. You may run and modify your own local copy under the terms in [LICENSE.md](LICENSE.md), but distributing or publishing a compiled/repackaged copy of the game requires the author's prior written permission. Please do not expect an official compiled download until the author publishes one.
 
-If no packaged build is available, run the game from source using the instructions above. The current repository version no longer includes **build_exe.bat** or **GeometryRhythm.spec**, so it does not provide a maintained one-click EXE build script.
+The [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases) may be used for release announcements, but **there is no downloadable .exe right now**.
+
+### Credits, copyright, and free mods
+
+**Game code:** Copyright © 2026 Mistervock. All rights reserved except for the limited permissions explicitly described in [LICENSE.md](LICENSE.md).
+
+**Music credit:** **“YARARARA (ヤラララ)” — AnythingBecomeMoe, featuring Kasane Teto SV2.** [Official music video](https://www.youtube.com/watch?v=T24rF_x0TmQ). This credit identifies the song's creator; it does not mean the music or video is licensed by the game author. Third-party music, video, characters, artwork, and other assets remain subject to their respective rights holders' terms.
+
+**Free modding is allowed under the custom terms in [LICENSE.md](LICENSE.md):**
+- You may download and use the project for personal, non-commercial purposes and create modifications.
+- Mods must be available to everyone free of charge. Do not sell mods, charge for downloads or access, put them behind a paywall or subscription, or sell bundles that include them.
+- Distribute mods as separate files (for example, chart JSON, your own assets, or patches) that require a copy of the game. Do not bundle the game's source code, complete game, executable, or original third-party media with a mod.
+- Do not republish the game's full source code or substantial portions on other websites, repositories, or file-sharing services without the author's prior written permission.
+- Keep the original copyright notice, credit **Geometry Rhythm** and link to this repository. Clearly label mods as unofficial; do not claim authorship of the original game, impersonate the project author, or imply endorsement.
+- Do not present a modified version as an official release or distribute a compiled/repackaged game without prior written permission.
 
 ---
 
@@ -263,18 +318,21 @@ If no packaged build is available, run the game from source using the instructio
 
 ### Возможности
 
-- **HD-разрешение:** 1280 × 720 и масштабируемый полноэкранный режим.
-- **Четыре геометрические дорожки:** у каждой свой цвет и форма. Стандартные клавиши — **D**, **F**, **J**, **K**.
+- **HD и Full HD:** выбор разрешения 1280 × 720 или 1920 × 1080, оконный и масштабируемый полноэкранный режимы.
+- **Четыре геометрические дорожки:** у каждой свой цвет и форма. Стандартные игровые клавиши — **D**, **F**, **J**, **K**.
 - **Обычные ноты и удержания:** нажимай в нужный момент и держи клавишу до конца длинной ноты.
-- **Очки и здоровье:** оценки попаданий, множитель комбо до ×4, шкала здоровья на 5 HP, точность, итоговая оценка и экран результатов.
-- **Список песен:** просматривай треки, слушай автоматические предпрослушивания или запускай случайную песню. Предпрослушивание отключается в настройках.
-- **Метаданные песни и чарта:** задавай название и автора трека, автора чарта и сложность от 1 до 5 звёзд.
-- **Редактор чартов:** ставь ноты мышью или записывай их во время проигрывания, меняй длину удержаний, отменяй действия, используй сетку и меняй скорость воспроизведения в редакторе.
-- **Автоматическая разметка:** анализируй музыку с NumPy, чтобы создать черновик чарта и затем исправить его вручную.
-- **События на временной шкале:** глюки, вспышки, фон, картинки, видео, хиллы, текстовые карточки и инверсия цветов.
-- **Папки событий:** группируй события, сортируй список по времени или типу, блокируй отдельные события или целые папки от случайного редактирования.
-- **Карточки достижений:** создавай, редактируй, просматривай и удаляй собственные карточки с названием, описанием и изображением.
-- **Настройки:** клавиши дорожек, аудиозадержка, скорость нот, громкость, полноэкранный режим, язык, предпрослушивание и затемнение медиа.
+- **Очки, ранги и здоровье:** оценки попаданий, множитель комбо до ×4, шкала на 5 HP, точность, итоговая оценка, ранги чартов **D–S** и общий ранг песни.
+- **Список песен:** обложки, группировка по авторам, поиск, сортировка по названию/рангу/числу чартов, предпрослушивание и случайный выбор.
+- **Метаданные песни и чарта:** название, автор и обложка трека, автор чарта, сложность от 1 до 5 звёзд и необязательное достижение за прохождение.
+- **Редактор чартов:** расстановка и запись нот, изменение длины удержаний, отмена действий, сетка, скорость воспроизведения и экранная подсказка по клавишам.
+- **Автоматическая разметка:** анализ музыки с NumPy и выбор плотности нот — **лёгкая**, **средняя** или **сложная**.
+- **Защита и обмен чартами:** периодическое автосохранение черновиков, импорт и экспорт чартов в JSON.
+- **События на временной шкале:** глюки, вспышки, смена фона, картинки, видео, хиллы, текстовые карточки и инверсия цветов.
+- **Папки событий:** группировка и сортировка событий, блокировка отдельных событий и целых папок.
+- **Система достижений:** создавай карточки и назначай одну из них чарту; прохождение чарта без провала открывает назначенное достижение.
+- **Настраиваемое управление:** смена клавиш дорожек и горячих клавиш меню, списка песен и редактора.
+- **Инструменты разработчика:** изменение метаданных песен/чартов и цветов групп авторов.
+- **Настройки и диагностика:** задержка звука, скорость нот, громкость, режим экрана, разрешение, язык, предпрослушивание, затемнение медиа и счётчик FPS.
 
 ### Требования
 
@@ -314,14 +372,22 @@ python main.py
 
 ### Песни и чарты
 
-Помещай музыкальные файлы в папку **songs/**. Поддерживаются форматы **.ogg**, **.mp3** и **.wav**. В репозитории есть пример трека — **game.ogg**.
+Помещай музыкальные файлы в папку **songs/**. Поддерживаются форматы **.ogg**, **.mp3** и **.wav**.
 
 1. Открой раздел **«ПЕСНИ»** в главном меню.
-2. Выбери песню, чтобы увидеть её чарты, или нажми **«Случайная»** (либо клавишу **R** в списке песен), чтобы запустить случайный трек.
+2. Выбери песню, чтобы увидеть её чарты, или используй случайный выбор — по умолчанию клавиша **R**.
 3. Выбери чарт для игры. Кнопки **«Править»** и **«Новый»** позволяют отредактировать существующий чарт или создать новый.
 4. Сохраняй изменения в редакторе сочетанием **Ctrl + S**.
 
-Для одной песни можно создавать несколько чартов. У каждого могут быть собственное название, автор и сложность от 1 до 5 звёзд. Звёзды — это метаданные чарта; сами по себе они не изменяют последовательность нот.
+Для одной песни можно создавать несколько чартов. У каждого могут быть собственное название, автор, сложность от 1 до 5 звёзд и необязательное достижение. Звёзды — это метаданные чарта; сами по себе они не изменяют последовательность нот.
+
+#### Поиск, сортировка, ранги и режим разработчика
+
+Список можно искать по названию песни, автору, названию чарта и автору чарта. По умолчанию клавиша **/** или **F** включает поиск, а **Tab** переключает сортировку: группы по авторам, название, лучший ранг или количество чартов. Горячие клавиши можно переназначить в настройках.
+
+В списках показываются прохождения и ранги. Завершение чарта без провала записывает победу; игра хранит лучший ранг каждого чарта от **D** до **S** и рассчитывает общий ранг песни по её чартам.
+
+Нажми **7** (по умолчанию) в списке песен, чтобы открыть **режим разработчика**. В нём можно менять название, автора и обложку песни, переименовывать чарт, назначать ему другую песню и задавать цвета фона для групп авторов. Это инструмент разработчика, а не отдельный игровой режим.
 
 #### Название песни, автор и сложность чарта
 
@@ -329,16 +395,18 @@ python main.py
 
 - **Название песни** — отображается в списке вместо имени аудиофайла.
 - **Автор песни** — исполнитель или автор трека.
+- **Обложка песни** — изображение из папки **images/** для фона экрана выбора песни.
 - **Автор чарта** — человек, создавший выбранный чарт.
 - **Сложность** — оценка от 1 до 5 звёзд.
+- **Достижение за победу** — необязательная карточка, которая откроется за успешное прохождение этого чарта.
 
-Название и автор песни сохраняются в локальных метаданных трека; автор и сложность хранятся вместе с чартом. После изменения данных чарта не забудь его сохранить.
+Название, автор и обложка сохраняются в локальных метаданных трека; автор, сложность и назначенное достижение хранятся вместе с чартом. После изменения данных чарта не забудь его сохранить. Назначенное достижение открывается после завершения чарта без провала; игра хранит состояние открытых карточек локально.
 
 ### Редактор чартов
 
 Когда песня остановлена, ноты можно ставить мышью; во время проигрывания — записывать клавишами дорожек. Более длинные нажатия создают удержания. Правая кнопка мыши удаляет ноту, а колёсико над нотой изменяет длину удержания. История отмены хранит до 80 шагов.
 
-| Действие | Управление |
+| Действие | Клавиши по умолчанию |
 | --- | --- |
 | Начать или остановить проигрывание | **Space** |
 | Передвинуть курсор на шаг сетки | **Left** / **Right** |
@@ -357,13 +425,27 @@ python main.py
 | Сдвинуть все ноты на 10 мс | **[** / **]** |
 | Открыть меню редактора | **Esc** |
 
-Скорости предпрослушивания в редакторе: **0.5×**, **0.75×**, **1.0×** и **1.25×**. Они влияют только на прослушивание внутри редактора, а не на скорость игры; при изменении скорости меняется и высота звука. Для подготовки аудио с другой скоростью нужен NumPy. Скорость также можно выбрать кнопками правой панели.
+Скорости воспроизведения в редакторе: **0.5×**, **0.75×**, **1.0×** и **1.25×**. Они влияют только на прослушивание внутри редактора, а не на скорость игры; при изменении скорости меняется и высота звука. Для подготовки аудио с другой скоростью нужен NumPy.
 
-Нажми на верхнюю полосу таймлайна, чтобы переместить курсор. Удерживай **Ctrl** и крути колёсико мыши, чтобы изменить масштаб. В меню редактора доступны сохранение, настройки песни, редактор достижений, авто-разметка и выход.
+Клавиши редактора можно переназначить в **«Настройки» → «Клавиши редактора»**. Нажми **F1** внутри редактора, чтобы открыть подсказку со своими текущими клавишами; любая клавиша закрывает её. **F3** на любом экране включает или выключает счётчик FPS.
+
+Нажми на верхнюю полосу таймлайна, чтобы переместить курсор. Удерживай **Ctrl** и крути колёсико мыши, чтобы изменить масштаб. В меню редактора доступны сохранение, настройки песни, редактор достижений, импорт/экспорт чартов, авто-разметка и выход.
+
+#### Импорт, экспорт и автосохранение чартов
+
+Пункт **«Экспорт чарта»** сохраняет текущий чарт в JSON в папку **exports/**. Пункт **«Импорт чарта»** загружает JSON из этой папки и создаёт отдельный чарт; указанный в файле музыкальный трек должен уже находиться в **songs/**.
+
+Если в чарте есть несохранённые изменения и песня не проигрывается, редактор примерно раз в **60 секунд** создаёт копию автосохранения в **data/autosave/**. Эти копии не отображаются в обычном списке чартов. Для обычного сохранения по-прежнему используй **Ctrl + S**.
 
 ### Автоматическая разметка
 
-Выбери **«АВТО-РАЗМЕТКА»** в меню редактора. Анализатор читает аудио средствами Pygame, изучает четыре частотных диапазона и ищет выраженные изменения спектральной энергии. Затем он ограничивает плотность нот и интервалы между ними; длительные звуки могут превращаться в удержания.
+Выбери **«АВТО-РАЗМЕТКА»** в меню редактора. Перед анализом можно выбрать один из трёх пресетов плотности:
+
+- **Лёгкая** — меньше нот и больше промежутки между ними.
+- **Средняя** — стандартный баланс количества нот и интервалов.
+- **Сложная** — более плотная разметка и меньшие минимальные интервалы.
+
+Анализатор читает аудио средствами Pygame, изучает четыре частотных диапазона и ищет выраженные изменения спектральной энергии. Затем он ограничивает плотность нот и интервалы между ними; длительные звуки могут превращаться в удержания.
 
 - Требуется **numpy**.
 - Авто-разметка заменяет текущий список нот черновиком. Если нужно сохранить исходный вариант, заранее сделай копию.
@@ -415,7 +497,9 @@ python main.py
 - **Описание** — до 200 символов.
 - **Изображение** — выбирается из поддерживаемых файлов папки **images/**.
 
-Карточки сохраняются в виде JSON-содержимого с расширением **.vcld** в папке **achievements/**. В проекте есть шаблон изображения **images/achievement_template.png**. Эта функция позволяет создавать и просматривать пользовательские карточки; автоматического отслеживания разблокировок или прогрессии достижений пока нет.
+Карточки сохраняются в виде JSON-содержимого с расширением **.vcld** в папке **achievements/**. В проекте есть шаблон изображения **images/achievement_template.png**.
+
+Чтобы карточка открывалась за прохождение, назначь её в пункте **«Достижение за победу»** в настройках чарта. Завершение выбранного чарта без провала открывает карточку; экран результатов сообщает об этом, а в каталоге полученные карточки отмечаются. Состояние хранится в **data/achievements_unlocked.json**.
 
 ### Настройки
 
@@ -425,16 +509,18 @@ python main.py
 - скорость падения нот;
 - громкость музыки и звуковых эффектов;
 - клавиши всех четырёх дорожек;
+- горячие клавиши меню, списка песен и редактора;
 - оконный или масштабируемый полноэкранный режим;
+- разрешение **1280 × 720** или **1920 × 1080**;
 - автоматическое предпрослушивание песен;
 - затемнение изображений и видео;
 - язык интерфейса — English или Русский.
 
-Настройки сохраняются локально в **data/settings.json**.
+Настройки сохраняются локально в **data/settings.json**. Клавиша **F3** включает или выключает счётчик FPS на любом экране.
 
 ### Формат файла чарта
 
-Чарты хранятся в JSON-формате версии **4**. Время задаётся в миллисекундах. Для нот **lane** — номер дорожки от **0** до **3**, **d** — длительность удержания (у обычной ноты отсутствует). Чарт может содержать поля **charter**, **difficulty**, **events** и **folders**.
+Чарты хранятся в JSON-формате версии **4**. Время задаётся в миллисекундах. Для нот **lane** — номер дорожки от **0** до **3**, **d** — длительность удержания (у обычной ноты отсутствует). Чарт может содержать поля **charter**, **difficulty**, **achievement** (имя файла карточки **.vcld**), **events** и **folders**. Поле **achievement** необязательно.
 
 ~~~json
 {
@@ -443,6 +529,7 @@ python main.py
   "name": "Пример чарта",
   "charter": "Автор чарта",
   "difficulty": 3,
+  "achievement": "achievement__example.vcld",
   "notes": [
     { "t": 4000, "lane": 0 },
     { "t": 5000, "lane": 2, "d": 600 }
@@ -468,31 +555,56 @@ geometry_rythm/
 ├── main.py                     # Точка входа в приложение
 ├── requirements.txt            # Зависимости Python
 ├── core/
-│   ├── game.py                 # Игровой процесс, счёт, здоровье и события
-│   ├── chart.py                # Ноты, метаданные и JSON-чарты
-│   ├── editor.py               # Редактор и скорость воспроизведения
-│   ├── autochart.py            # Анализ аудио и авто-разметка
+│   ├── game.py                 # Игровой процесс, очки, ранги, здоровье и события
+│   ├── chart.py                # Ноты, метаданные, достижение и JSON-чарты
+│   ├── editor.py               # Редактор, автосохранение, импорт и экспорт
+│   ├── autochart.py            # Анализ аудио и пресеты плотности нот
+│   ├── songs.py                # Песни, метаданные, ранги, победы и файлы чартов
+│   ├── songs_screen.py         # Поиск песен, сортировка, обложки и список чартов
+│   ├── song_settings.py        # Метаданные песни/чарта и назначение достижения
+│   ├── settings.py             # Локальные настройки
+│   ├── settings_screen.py      # Настройки игры, экрана и звука
+│   ├── keymap.py               # Настраиваемые клавиши управления
+│   ├── keys_screen.py          # Назначение клавиш меню, песен и редактора
+│   ├── screen_setting.py       # Разрешение и масштаб интерфейса
+│   ├── dev_menu.py             # Инструменты разработчика и цвета авторов
 │   ├── events.py               # События и работа с медиа
 │   ├── events_screen.py        # Редактор событий и папок
-│   ├── achievements.py         # Хранение карточек достижений
+│   ├── achievements.py         # Карточки и состояние достижений
 │   ├── achievement_editor.py   # Создание, редактирование и удаление карточек
 │   ├── achievements_screen.py  # Просмотр каталога карточек
-│   ├── achievements_view.py    # Отрисовка карточек достижений
-│   ├── song_settings.py        # Метаданные песни и чарта
-│   ├── display.py              # Оконный и полноэкранный режим
+│   ├── achievements_view.py    # Отрисовка карточек
+│   ├── display.py              # Оконный/полноэкранный режим и счётчик FPS
 │   ├── stretch.py              # Подготовка аудио для другой скорости
 │   ├── dialogs.py              # Подтверждение, ввод текста и выбор
-│   └── ...                     # Меню, звук, результаты, рекорды, переводы и эффекты
-├── songs/                      # Музыкальные файлы, включая game.ogg
-├── images/                     # Изображения и видео для событий и карточек
+│   └── ...                     # Меню, результаты, рекорды, переводы, эффекты, звук и кэш
+├── songs/                      # Музыкальные файлы (.ogg, .mp3, .wav)
+├── images/                     # Обложки песен, медиа событий и картинки достижений
 ├── achievements/               # Пользовательские карточки (*.vcld)
-└── data/                       # Чарты, настройки, рекорды и кэш
+├── exports/                    # Экспортируемые/импортируемые JSON-чарты (создаётся при необходимости)
+└── data/                       # Чарты, настройки, рекорды, ранги, победы и кэш
 ~~~
 
-Локально создаются данные: **data/charts/** — чарты, **data/songmeta/** — названия и авторы песен, **data/songinfo/** — анализ аудио, **data/cache/speed/** — аудио для альтернативной скорости, **data/settings.json** — настройки, **data/records.json** — рекорды.
+Локальные данные: **data/charts/** — чарты, **data/songmeta/** — названия, авторы и обложки песен, **data/songinfo/** — анализ аудио, **data/cache/speed/** — аудио для альтернативной скорости, **data/autosave/** — копии автосохранения, **data/settings.json** — настройки, **data/records.json** — рекорды очков, **data/ranks.json** — лучшие ранги чартов, **data/wins.json** — пройденные чарты, **data/author_colors.json** — цвета групп авторов, **data/achievements_unlocked.json** — открытые достижения.
 
-### Windows-версия (.exe)
+### Windows-версия (.exe) и распространение
 
-Проверь [страницу GitHub Releases](https://github.com/Mistervock/geometry_rythm/releases): готовые Windows-сборки, если они опубликованы, находятся в разделе **Assets** соответствующего релиза. Скачай EXE или архив и следуй инструкциям в описании релиза. Если в пакете не указано иное, размести исполняемый файл рядом с папками **songs/**, **data/** и **images/**, чтобы игра могла читать музыку, чарты, настройки и медиа.
+**Готового Windows-файла .exe пока нет.** В репозитории также нет скрипта сборки исполняемого файла или спецификации PyInstaller. Локально запускать и изменять свою копию можно на условиях [LICENSE.md](LICENSE.md), однако распространять или публиковать скомпилированную/перепакованную игру разрешается только с предварительного письменного разрешения автора. Официальной готовой сборки не будет, пока автор сам её не опубликует.
 
-Если готовой сборки нет, запусти игру из исходников по инструкции выше. В текущей версии репозитория больше нет файлов **build_exe.bat** и **GeometryRhythm.spec**, поэтому проект сейчас не содержит поддерживаемого скрипта для сборки EXE в один клик.
+Страница [GitHub Releases](https://github.com/Mistervock/geometry_rythm/releases) может использоваться для объявлений о релизах, но **скачать с неё готовый .exe сейчас нельзя**.
+
+### Авторские права, указание авторства и бесплатные модификации
+
+**Исходный код игры:** © 2026 Mistervock. Все права защищены, кроме ограниченных разрешений, прямо указанных в файле [LICENSE.md](LICENSE.md).
+
+**Музыка:** **«YARARARA (ヤラララ)» — AnythingBecomeMoe, при участии Kasane Teto SV2.** [Официальный музыкальный клип на YouTube](https://www.youtube.com/watch?v=T24rF_x0TmQ). Эта запись указывает автора песни, но сама по себе не означает, что автор игры получил права на распространение музыки или видео. Музыка, видео, персонажи, иллюстрации и другие сторонние материалы остаются под условиями соответствующих правообладателей.
+
+**Создавать модификации можно бесплатно — на условиях [LICENSE.md](LICENSE.md):**
+- Игру разрешено скачивать и использовать в личных некоммерческих целях, а также создавать собственные модификации.
+- Модификации должны быть доступны всем бесплатно. Запрещено продавать моды, брать плату за скачивание или доступ, размещать их за платной подпиской/пейволлом или продавать наборы с модами.
+- Распространяй модификации отдельными файлами (например, JSON-чартами, собственными ресурсами или патчами), для которых нужна копия игры. Не включай в мод исходный код игры, полную копию игры, исполняемый файл или оригинальные сторонние медиа.
+- Без предварительного письменного разрешения автора нельзя публиковать полный исходный код игры или его существенные части на других сайтах, в репозиториях или файлообменниках.
+- Сохраняй уведомление об авторских правах, указывай **Geometry Rhythm** и ссылку на этот репозиторий. Помечай мод как неофициальный. Нельзя приписывать себе авторство оригинальной игры, выдавать себя за автора проекта или создавать впечатление, что автор одобрил мод.
+- Нельзя выдавать изменённую версию за официальный релиз или распространять скомпилированную/перепакованную игру без предварительного письменного разрешения автора.
+
+
