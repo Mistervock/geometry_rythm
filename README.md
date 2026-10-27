@@ -305,6 +305,8 @@ The [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases
 
 **Music credit:** **“YARARARA (ヤラララ)” — written, composed, and arranged by AnythingBecomeMoe; vocals by Kasane Teto SV2.** [Official music video](https://www.youtube.com/watch?v=T24rF_x0TmQ). This is an attribution, not a licence to redistribute the song or video. Third-party music, video, characters, artwork, and other assets remain subject to their respective rights holders' terms.
 
+**Additional music credit — “Jukai” (also labelled “Jukai - An Arbiter Core Suppresion” in the provided MP3 metadata):** composed by **Christopher Baklid**. The track is associated with the *Lobotomy Corporation* soundtrack by **Project Moon**. [Christopher Baklid’s SoundCloud track](https://soundcloud.com/christopherbaklid/jukai). This music was not created by, and is not owned by, the Geometry Rhythm author. Attribution does not transfer ownership or grant permission to redistribute the recording; the relevant rights remain with their respective rights holders.
+
 **Free modding is allowed under the custom terms in [LICENSE.md](LICENSE.md):**
 - You may download and use the project for personal, non-commercial purposes and create modifications.
 - Mods must be available to everyone free of charge. Do not sell mods, charge for downloads or access, put them behind a paywall or subscription, or sell bundles that include them.
@@ -603,6 +605,8 @@ geometry_rythm/
 **Исходный код игры:** © 2026 Mistervock. Все права защищены, кроме ограниченных разрешений, прямо указанных в файле [LICENSE.md](LICENSE.md).
 
 **Музыкальный кредит:** **«YARARARA (ヤラララ)» — автор текста, музыки и аранжировки AnythingBecomeMoe; вокал — Kasane Teto SV2.** [Официальный музыкальный клип на YouTube](https://www.youtube.com/watch?v=T24rF_x0TmQ). Это указание авторства, а не разрешение распространять песню или клип. Музыка, видео, персонажи, иллюстрации и другие сторонние материалы остаются под условиями соответствующих правообладателей.
+
+**Дополнительный музыкальный кредит — «Jukai» (в метаданных предоставленного MP3 указано «Jukai - An Arbiter Core Suppresion»):** автор композиции — **Christopher Baklid**. Трек связан с саундтреком *Lobotomy Corporation* от **Project Moon**. [Страница «Jukai» на SoundCloud автора](https://soundcloud.com/christopherbaklid/jukai). Эта музыка не создана автором Geometry Rhythm и ему не принадлежит. Указание авторства не передаёт права и не разрешает дальнейшее распространение записи; права остаются у соответствующих правообладателей.
 
 **Создавать модификации можно бесплатно — на условиях [LICENSE.md](LICENSE.md):**
 - Игру разрешено скачивать и использовать в личных некоммерческих целях, а также создавать собственные модификации.
