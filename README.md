@@ -2,11 +2,16 @@
 
 <p align="center">
   <strong>A geometric rhythm game inspired by Friday Night Funkin' and Geometry Catcher.</strong><br>
-  <a href="#english">English</a> · <a href="#русский">Русский</a> · <a href="https://github.com/Mistervock/geometry_rythm/releases">Releases / Релизы</a>
+  <a href="#english">English</a> · <a href="#русский">Русский</a> · <a href="#credits-copyright-and-free-mods">Copyright & Mods</a> · <a href="LICENSE.md">License / Условия</a> · <a href="https://github.com/Mistervock/geometry_rythm/releases">Releases / Релизы</a>
 </p>
 
 <p align="center">
   <strong>Version 0.2 · HD 1280 × 720 / Full HD 1920 × 1080 · Python + Pygame</strong>
+</p>
+
+<p align="center">
+  <strong>Copyright / Авторские права:</strong> Mods must be free; republishing the full source code or distributing a compiled game requires prior written permission. / Моды должны быть бесплатными; публикация полного исходного кода или распространение скомпилированной игры требует предварительного письменного разрешения.
+  <br><a href="LICENSE.md">Full terms / Полные условия использования</a>
 </p>
 
 ---
@@ -298,7 +303,7 @@ The [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases
 
 **Game code:** Copyright © 2026 Mistervock. All rights reserved except for the limited permissions explicitly described in [LICENSE.md](LICENSE.md).
 
-**Music credit:** **“YARARARA (ヤラララ)” — AnythingBecomeMoe, featuring Kasane Teto SV2.** [Official music video](https://www.youtube.com/watch?v=T24rF_x0TmQ). This credit identifies the song's creator; it does not mean the music or video is licensed by the game author. Third-party music, video, characters, artwork, and other assets remain subject to their respective rights holders' terms.
+**Music credit:** **“YARARARA (ヤラララ)” — written, composed, and arranged by AnythingBecomeMoe; vocals by Kasane Teto SV2.** [Official music video](https://www.youtube.com/watch?v=T24rF_x0TmQ). This is an attribution, not a licence to redistribute the song or video. Third-party music, video, characters, artwork, and other assets remain subject to their respective rights holders' terms.
 
 **Free modding is allowed under the custom terms in [LICENSE.md](LICENSE.md):**
 - You may download and use the project for personal, non-commercial purposes and create modifications.
@@ -597,7 +602,7 @@ geometry_rythm/
 
 **Исходный код игры:** © 2026 Mistervock. Все права защищены, кроме ограниченных разрешений, прямо указанных в файле [LICENSE.md](LICENSE.md).
 
-**Музыка:** **«YARARARA (ヤラララ)» — AnythingBecomeMoe, при участии Kasane Teto SV2.** [Официальный музыкальный клип на YouTube](https://www.youtube.com/watch?v=T24rF_x0TmQ). Эта запись указывает автора песни, но сама по себе не означает, что автор игры получил права на распространение музыки или видео. Музыка, видео, персонажи, иллюстрации и другие сторонние материалы остаются под условиями соответствующих правообладателей.
+**Музыкальный кредит:** **«YARARARA (ヤラララ)» — автор текста, музыки и аранжировки AnythingBecomeMoe; вокал — Kasane Teto SV2.** [Официальный музыкальный клип на YouTube](https://www.youtube.com/watch?v=T24rF_x0TmQ). Это указание авторства, а не разрешение распространять песню или клип. Музыка, видео, персонажи, иллюстрации и другие сторонние материалы остаются под условиями соответствующих правообладателей.
 
 **Создавать модификации можно бесплатно — на условиях [LICENSE.md](LICENSE.md):**
 - Игру разрешено скачивать и использовать в личных некоммерческих целях, а также создавать собственные модификации.
