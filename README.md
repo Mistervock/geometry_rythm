@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <strong>Version 0.2 · HD 1280 × 720 / Full HD 1920 × 1080 · Python + Pygame</strong>
+  <strong>Version 1.0 · Chart format v8 · HD 1280 × 720 / Full HD 1920 × 1080 · Python + Pygame</strong>
 </p>
 
 <p align="center">
@@ -44,7 +44,7 @@ The project is inspired by **Friday Night Funkin'** and the geometric style of *
 
 - Python
 - **pygame** — game window, input, graphics, and audio
-- **numpy** — automatic chart generation and alternate-speed audio in the editor
+- **numpy** — automatic chart generation, BPM detection, and pitch-preserving alternate-speed audio
 - **opencv-python** — video playback in chart events
 
 The dependencies are listed in **requirements.txt**. NumPy and OpenCV are required for their respective extra features; video playback is not required for ordinary gameplay.
@@ -108,9 +108,17 @@ Open a chart in the editor, press **Esc**, and choose **Song Settings**. You can
 
 Song title, artist, and cover image are stored as local song metadata; charter, difficulty, and the assigned achievement are stored with the chart. Save the chart after changing chart details. An assigned achievement unlocks only when the chart is completed without failing; the game remembers unlocked achievement cards locally.
 
+#### Practice, ghosts, and modifiers
+
+Choose **Practice** for a chart to set an **A–B** section, loop it, restart quickly, and practise at **50%**, **75%**, **90%**, or **100%** speed. HP loss can be enabled or disabled. Practice does not overwrite normal score records, chart ranks, or best ghosts. The game uses WSOLA time-stretching to preserve pitch when the song is slowed down; **numpy** is required.
+
+A **Ghost** is a saved timeline from a best completed run. It can be shown during play to compare score and combo progress; local and imported ghosts are supported. A ghost is tied to the chart's notes and modifier set, so it is not shown as a match after either changes.
+
+The chart's **Modifiers** panel offers **Mirror** (reverse lane order), **Speed** (note travel at **0.75×**, **1.25×**, or **1.5×**, without changing the music), and **Hidden** (notes appear only near the hit line). The chart and scoring rules are not rewritten. Best ranks and ghosts are stored separately for each modifier combination.
+
 ### Chart editor
 
-The editor works directly on the song timeline. When playback is stopped, use the mouse to place notes; while playing, press lane keys to record notes. Longer recorded presses create hold notes. Right-click a note to remove it, and use the mouse wheel over a note to adjust a hold's length. The undo history stores up to 80 steps.
+The editor works directly on the song timeline. When playback is stopped, use the mouse to place notes; while playing, press lane keys to record notes. Longer recorded presses create hold notes. Right-click a note to remove it, and use the mouse wheel over a note to adjust a hold's length. The editor history supports **undo and redo** and stores up to **300 commands**.
 
 | Action | Default controls |
 | --- | --- |
@@ -131,7 +139,7 @@ The editor works directly on the song timeline. When playback is stopped, use th
 | Shift all notes by 10 ms | **[** / **]** |
 | Open the editor menu | **Esc** |
 
-Editor playback speeds are **0.5×**, **0.75×**, **1.0×**, and **1.25×**. They only affect playback inside the editor, not gameplay speed; changing the rate also changes the audio pitch. NumPy is needed to prepare alternate-speed audio. The speed buttons are also available in the right-hand panel.
+Editor playback speeds are **0.5×**, **0.75×**, **1.0×**, and **1.25×**. They affect editor preview only, not normal gameplay. Alternate-speed audio uses WSOLA time-stretching to preserve pitch; **numpy** is required.
 
 The default keyboard shortcuts can be changed in **Settings → Chart Editor Keys**. Press **F1** inside the editor to open a shortcut guide that reflects your current bindings; press any key to close it. Press **F3** on any screen to toggle the FPS counter.
 
@@ -141,7 +149,7 @@ Click the timeline bar at the top to seek. Hold **Ctrl** while using the mouse w
 
 Choose **Export Chart** from the editor menu to save the current chart as JSON under **exports/**. **Import Chart** reads a JSON file from that folder and creates a separate chart; the song file referenced by the chart must already exist in **songs/**.
 
-When the chart has unsaved changes and playback is stopped, the editor creates an autosave snapshot approximately every **60 seconds** in **data/autosave/**. Autosaves are kept separate from the regular chart list. Use **Ctrl + S** to save the chart normally; autosave snapshots are an extra safeguard, not a replacement for manual saving.
+Autosave starts about **20 seconds** after an unsaved edit. Up to three rotating snapshots are kept in **data/autosave/**, and the game checks for recoverable work at startup. Autosaves are separate from the regular chart list; use **Ctrl + S** for a normal save.
 
 ### Automatic chart generation
 
@@ -159,7 +167,7 @@ The analyser reads audio through Pygame, examines four frequency ranges, and det
 
 ### Song events and event folders
 
-Open a chart in the editor, press **Esc**, and choose **Events**. Events are attached to positions on the song timeline and can be previewed individually. The event editor also supports copy/paste of properties, duplication, folders, sorting, and locking.
+Open a chart in the editor, press **Esc**, and choose **Events**. Events are attached to positions on the song timeline and can be previewed individually. The event editor also supports copy/paste, duplication, categorised folders, sorting, locking, multi-selection, and group edits for shared properties.
 
 | Event | What it does |
 | --- | --- |
@@ -173,6 +181,16 @@ Open a chart in the editor, press **Esc**, and choose **Events**. Events are att
 | **Invert** | Temporarily applies a negative/inverted-colour effect to the screen. |
 
 Place image and video files in **images/**. Supported image formats are **.png**, **.jpg**, and **.jpeg**; supported video formats are **.mp4**, **.webm**, **.mov**, **.avi**, **.mkv**, and **.m4v**. Video playback requires **opencv-python**. The Settings screen includes a media-dimming control for images and videos displayed behind the lanes.
+
+#### Keyframed animations, effect packs, and event tracks
+
+Image and video events can use chart-level keyframe animations. The animation editor controls **X/Y position**, **scale**, **rotation**, **opacity**, and **tint**, with linear/eased/step transitions and optional looping.
+
+New timeline event types include **Screen effect** (blur, glow, chromatic aberration, wave, warm/cool tint, monochrome), **Camera** (animated zoom and pan), **Transition** (fade, iris, or wipe), and **Effect pack** (reusable rings, particles, and flashes).
+
+Event folders can be categorised as **Effects**, **Decoration**, or **Custom**. They can be hidden, collapsed, locked, renamed, and sorted; hiding a folder affects only the editor list, not playback. Multi-selection supports shared-property edits. A chart supports up to eight folders.
+
+Visual packs are JSON files in **packs/** or **data/packs/**. The bundled examples are **Burst**, **Fade Puff**, **Ring Pulse**, and **Sparks**. Press **B** in the event editor to open the pack browser and preview packs.
 
 Useful event-editor keys:
 
@@ -207,6 +225,12 @@ Entries are saved as JSON content using the **.vcld** extension in **achievement
 
 To make a card unlockable, open **Song Settings** for a chart and select it under **Achievement on win**. Completing that chart without failing unlocks the assigned card; the results screen reports the unlock and the catalogue marks received cards. Local unlock state is stored in **data/achievements_unlocked.json**.
 
+### Data-only mods
+
+Each mod lives in its own folder under **mods/** and has a **mod.json** manifest. Mods can customise the interface/lane palette, add English translations, or provide songs, charts, images, and video assets. Mods contain data only: **their Python code is never executed**. Mod charts open as copies and are saved into **data/charts/**, leaving the source mod files unchanged.
+
+The example **mods/example_neon/mod.json** shows a palette mod. Set **"enabled": true** in its manifest to activate it. Loading errors are isolated per mod and recorded in **data/mods.log**.
+
 ### Settings
 
 The Settings screen includes:
@@ -220,17 +244,20 @@ The Settings screen includes:
 - Selectable resolution: **1280 × 720** or **1920 × 1080**
 - Automatic song previews in the song browser
 - Image and video dimming
+- Ghost display and ghost opacity
+- Visual-effect quality: **Off**, **Low**, or **High**
+- Autosave toggle
 - English / Russian interface language
 
 Settings are stored locally in **data/settings.json**. The **F3** shortcut toggles the FPS counter and is available throughout the game.
 
 ### Chart file format
 
-Charts use JSON format version **4**. Times are measured in milliseconds. For notes, **lane** is numbered from **0** to **3**; **d** is the hold duration and is omitted for regular notes. Charts can also contain **charter**, **difficulty**, **achievement** (the assigned **.vcld** filename), **events**, and **folders** fields. The achievement field is optional.
+Charts use JSON format version **8**. Times are measured in milliseconds. For notes, **lane** is numbered from **0** to **3**; **d** is the hold duration and is omitted for regular notes. Charts can also contain **charter**, **difficulty**, **achievement**, **events**, **folders**, **modifiers**, and **animations**. Folder entries support category and visibility fields; image/video events can reference chart animations with **anim_id**. Older supported chart versions are validated and migrated on load.
 
 ~~~json
 {
-  "version": 4,
+  "version": 8,
   "song": "game.ogg",
   "name": "Example chart",
   "charter": "Chart author",
@@ -280,6 +307,12 @@ geometry_rythm/
 │   ├── achievement_editor.py  # Create, edit, and delete achievement cards
 │   ├── achievements_screen.py # Achievement-card catalogue
 │   ├── achievements_view.py   # Achievement-card rendering
+│   ├── anim.py / anim_editor.py # Keyframed animations
+│   ├── cine.py / fx.py         # Camera, transitions, and screen effects
+│   ├── packs.py / pack_browser.py # JSON effect packs
+│   ├── modifiers.py / modsys.py # Gameplay modifiers and data-only mods
+│   ├── practice.py / ghost.py  # Practice and performance ghosts
+│   ├── beatdetect.py / tracks.py # BPM detection and event tracks
 │   ├── display.py              # Window/fullscreen display and FPS counter
 │   ├── stretch.py              # Alternate-speed audio generation
 │   ├── dialogs.py              # Confirmation, text input, and selection dialogs
@@ -287,11 +320,31 @@ geometry_rythm/
 ├── songs/                      # Audio tracks (.ogg, .mp3, .wav)
 ├── images/                     # Song covers, event media, and achievement images
 ├── achievements/               # Custom achievement cards (*.vcld)
+├── mods/                       # Data-only mods (mod.json)
+├── packs/                      # Built-in visual effect packs
+├── tests/                      # Automated tests
 ├── exports/                    # Exported/importable chart JSON files (created as needed)
 └── data/                       # Local charts, settings, records, ranks, wins, and caches
 ~~~
 
-Local data includes **data/charts/** for charts, **data/songmeta/** for song titles/artists/covers, **data/songinfo/** for audio analysis, **data/cache/speed/** for alternate-speed audio, **data/autosave/** for chart snapshots, **data/settings.json** for preferences, **data/records.json** for score records, **data/ranks.json** for best chart ranks, **data/wins.json** for completed charts, **data/author_colors.json** for artist-group colours, and **data/achievements_unlocked.json** for unlocked achievement cards.
+Local data also includes **data/ghosts/** (performance ghosts), **data/library.json** (favourites and run history), **data/modifiers.json** (per-chart modifier choices), **data/packs/** (user effect packs), **data/progress.json** (progress counters), **data/practice.json** (practice settings), **data/mods.log** (mod loading report), and **data/selftest.log** (self-check report).
+
+#### Tests and self-diagnostics
+
+Run the built-in self-check from the project root:
+
+~~~bash
+python main.py --selftest
+~~~
+
+It checks the Python environment, writable data folders, fonts, audio device, mods, charts, alternate-speed audio, and automatic beat detection. The report is saved to **data/selftest.log**.
+
+To run the automated tests:
+
+~~~bash
+python -m pip install -r requirements-dev.txt
+python -m pytest tests -q
+~~~
 
 ### Windows executable and distribution
 
@@ -305,7 +358,7 @@ The [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases
 
 **Music credit:** **“YARARARA (ヤラララ)” — written, composed, and arranged by AnythingBecomeMoe; vocals by Kasane Teto SV2.** [Official music video](https://www.youtube.com/watch?v=T24rF_x0TmQ). This is an attribution, not a licence to redistribute the song or video. Third-party music, video, characters, artwork, and other assets remain subject to their respective rights holders' terms.
 
-**Additional music credit — “Jukai” composed by **Christopher Baklid**. The track is associated with the *Lobotomy Corporation* soundtrack by **Project Moon**. [Christopher Baklid’s SoundCloud track](https://soundcloud.com/christopherbaklid/jukai). This music was not created by, and is not owned by, the Geometry Rhythm author. Attribution does not transfer ownership or grant permission to redistribute the recording; the relevant rights remain with their respective rights holders.
+**Additional music credit — “Jukai” (also labelled “Jukai - An Arbiter Core Suppresion” in the provided MP3 metadata):** composed by **Christopher Baklid**. The track is associated with the *Lobotomy Corporation* soundtrack by **Project Moon**. [Christopher Baklid’s SoundCloud track](https://soundcloud.com/christopherbaklid/jukai). This music was not created by, and is not owned by, the Geometry Rhythm author. Attribution does not transfer ownership or grant permission to redistribute the recording; the relevant rights remain with their respective rights holders.
 
 **Free modding is allowed under the custom terms in [LICENSE.md](LICENSE.md):**
 - You may download and use the project for personal, non-commercial purposes and create modifications.
@@ -345,7 +398,7 @@ The [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases
 
 - Python
 - **pygame** — окно игры, ввод, графика и звук
-- **numpy** — автоматическая разметка и подготовка аудио для изменения скорости в редакторе
+- **numpy** — автоматическая разметка, определение BPM и изменение скорости аудио с сохранением высоты тона
 - **opencv-python** — воспроизведение видео в событиях
 
 Все зависимости перечислены в **requirements.txt**. NumPy и OpenCV необходимы для отдельных функций; для обычной игры воспроизведение видео не требуется.
@@ -409,9 +462,17 @@ python main.py
 
 Название, автор и обложка сохраняются в локальных метаданных трека; автор, сложность и назначенное достижение хранятся вместе с чартом. После изменения данных чарта не забудь его сохранить. Назначенное достижение открывается после завершения чарта без провала; игра хранит состояние открытых карточек локально.
 
+#### Практика, призраки и модификаторы
+
+В режиме **«Практика»** можно выбрать участок **A–B**, включить его повтор, быстрый рестарт и одну из скоростей: **50%**, **75%**, **90%** или **100%**. Потерю HP можно включить или отключить. Практика не перезаписывает обычные рекорды, ранги чартов и лучшие призраки. Для изменения скорости используется WSOLA с сохранением высоты тона; требуется **numpy**.
+
+**Призрак** — сохранённая временная шкала лучшего прохождения. Его можно показывать во время игры, чтобы сравнивать очки и комбо. Поддерживаются собственные и импортированные призраки. Призрак привязан к нотам чарта и набору модификаторов: после изменения нот или модификаторов он больше не считается подходящим.
+
+Панель **«МОДИФ.»** предлагает **Зеркало** (обратный порядок дорожек), **Скорость** (движение нот на **0.75×**, **1.25×** или **1.5×** без изменения музыки) и **Скрытые** (ноты появляются только ближе к линии попадания). Модификаторы не переписывают чарт и правила начисления очков; рекорды и призраки хранятся отдельно для каждой комбинации.
+
 ### Редактор чартов
 
-Когда песня остановлена, ноты можно ставить мышью; во время проигрывания — записывать клавишами дорожек. Более длинные нажатия создают удержания. Правая кнопка мыши удаляет ноту, а колёсико над нотой изменяет длину удержания. История отмены хранит до 80 шагов.
+Когда песня остановлена, ноты можно ставить мышью; во время проигрывания — записывать клавишами дорожек. Более длинные нажатия создают удержания. Правая кнопка мыши удаляет ноту, а колёсико над нотой изменяет длину удержания. История редактора поддерживает **отмену и повтор** и хранит до **300 команд**.
 
 | Действие | Клавиши по умолчанию |
 | --- | --- |
@@ -432,7 +493,7 @@ python main.py
 | Сдвинуть все ноты на 10 мс | **[** / **]** |
 | Открыть меню редактора | **Esc** |
 
-Скорости воспроизведения в редакторе: **0.5×**, **0.75×**, **1.0×** и **1.25×**. Они влияют только на прослушивание внутри редактора, а не на скорость игры; при изменении скорости меняется и высота звука. Для подготовки аудио с другой скоростью нужен NumPy.
+Скорости воспроизведения в редакторе: **0.5×**, **0.75×**, **1.0×** и **1.25×**. Они влияют только на прослушивание внутри редактора, а не на обычную игру. Для изменения скорости используется WSOLA с сохранением высоты тона; требуется **numpy**.
 
 Клавиши редактора можно переназначить в **«Настройки» → «Клавиши редактора»**. Нажми **F1** внутри редактора, чтобы открыть подсказку со своими текущими клавишами; любая клавиша закрывает её. **F3** на любом экране включает или выключает счётчик FPS.
 
@@ -442,7 +503,7 @@ python main.py
 
 Пункт **«Экспорт чарта»** сохраняет текущий чарт в JSON в папку **exports/**. Пункт **«Импорт чарта»** загружает JSON из этой папки и создаёт отдельный чарт; указанный в файле музыкальный трек должен уже находиться в **songs/**.
 
-Если в чарте есть несохранённые изменения и песня не проигрывается, редактор примерно раз в **60 секунд** создаёт копию автосохранения в **data/autosave/**. Эти копии не отображаются в обычном списке чартов. Для обычного сохранения по-прежнему используй **Ctrl + S**.
+Автосохранение начинается примерно через **20 секунд** после несохранённого изменения. Игра хранит до трёх сменяемых копий в **data/autosave/** и при запуске проверяет, можно ли восстановить работу. Эти копии не отображаются в обычном списке чартов; для обычного сохранения по-прежнему используй **Ctrl + S**.
 
 ### Автоматическая разметка
 
@@ -460,7 +521,7 @@ python main.py
 
 ### События песни и папки событий
 
-Открой чарт в редакторе, нажми **Esc** и выбери **«СОБЫТИЯ»**. События привязаны ко времени песни и могут просматриваться по отдельности. В редакторе доступны копирование и вставка параметров, дублирование, папки, сортировка и блокировка.
+Открой чарт в редакторе, нажми **Esc** и выбери **«СОБЫТИЯ»**. События привязаны ко времени песни и могут просматриваться по отдельности. В редакторе доступны копирование и вставка параметров, дублирование, папки категорий, сортировка, блокировка, множественный выбор и групповые правки общих параметров.
 
 | Событие | Что делает |
 | --- | --- |
@@ -474,6 +535,16 @@ python main.py
 | **Инверсия** | На короткое время превращает цвета экрана в негатив. |
 
 Помещай изображения и видео в **images/**. Поддерживаются изображения **.png**, **.jpg**, **.jpeg** и видео **.mp4**, **.webm**, **.mov**, **.avi**, **.mkv**, **.m4v**. Для видео нужен **opencv-python**. В настройках есть регулировка затемнения медиа, отображаемого за дорожками.
+
+#### Анимации по ключевым кадрам, пакеты и дорожки событий
+
+События-картинки и видео могут использовать анимации, хранящиеся в чарте. Редактор анимаций управляет **координатами X/Y**, **масштабом**, **поворотом**, **прозрачностью** и **оттенком**. Поддерживаются линейные и плавные переходы, ступенчатое изменение и зацикливание.
+
+Добавлены типы событий **Экранный эффект** (размытие, свечение, хроматика, волна, тёплый/холодный оттенок и монохром), **Камера** (масштаб и смещение кадра), **Переход** (затемнение, диафрагма или шторка) и **Пакет эффектов** (кольца, частицы и вспышки).
+
+Папки событий можно распределять по категориям **«Эффекты»**, **«Оформление»** и **«Свободная»**. Их можно скрывать, сворачивать, блокировать, переименовывать и сортировать. Скрытие влияет только на список редактора, но не на проигрывание. Для множественного выбора доступны групповые правки общих параметров; в одном чарте может быть до восьми папок.
+
+Пакеты визуальных эффектов — это JSON-файлы в **packs/** или **data/packs/**. В комплект входят **Burst**, **Fade Puff**, **Ring Pulse** и **Sparks**. Нажми **B** в редакторе событий, чтобы открыть библиотеку и предпросмотр пакетов.
 
 Полезные клавиши редактора событий:
 
@@ -508,6 +579,12 @@ python main.py
 
 Чтобы карточка открывалась за прохождение, назначь её в пункте **«Достижение за победу»** в настройках чарта. Завершение выбранного чарта без провала открывает карточку; экран результатов сообщает об этом, а в каталоге полученные карточки отмечаются. Состояние хранится в **data/achievements_unlocked.json**.
 
+### Моды из данных
+
+Каждый мод хранится в отдельной папке внутри **mods/** и содержит манифест **mod.json**. Моды могут менять палитру интерфейса и дорожек, добавлять английские переводы, песни, чарты, изображения и видео. Моды содержат только данные: **Python-код модов не исполняется**. Чарты из модов открываются как копии и при сохранении попадают в **data/charts/**, не изменяя исходные файлы.
+
+Пример мода с неоновой палитрой находится в **mods/example_neon/mod.json**. Чтобы включить его, установи **"enabled": true**. Ошибки одного мода не отключают остальные; отчёт записывается в **data/mods.log**.
+
 ### Настройки
 
 В разделе настроек можно менять:
@@ -521,17 +598,20 @@ python main.py
 - разрешение **1280 × 720** или **1920 × 1080**;
 - автоматическое предпрослушивание песен;
 - затемнение изображений и видео;
+- отображение призрака и его прозрачность;
+- качество экранных эффектов: **выключено**, **низкое** или **высокое**;
+- включение и выключение автосохранения;
 - язык интерфейса — English или Русский.
 
 Настройки сохраняются локально в **data/settings.json**. Клавиша **F3** включает или выключает счётчик FPS на любом экране.
 
 ### Формат файла чарта
 
-Чарты хранятся в JSON-формате версии **4**. Время задаётся в миллисекундах. Для нот **lane** — номер дорожки от **0** до **3**, **d** — длительность удержания (у обычной ноты отсутствует). Чарт может содержать поля **charter**, **difficulty**, **achievement** (имя файла карточки **.vcld**), **events** и **folders**. Поле **achievement** необязательно.
+Чарты хранятся в JSON-формате версии **8**. Время задаётся в миллисекундах. Для нот **lane** — номер дорожки от **0** до **3**, **d** — длительность удержания (у обычной ноты отсутствует). Чарт может содержать поля **charter**, **difficulty**, **achievement**, **events**, **folders**, **modifiers** и **animations**. Папки поддерживают категорию и видимость; события-картинки и видео могут ссылаться на анимацию через **anim_id**. Старые поддерживаемые версии проверяются и мигрируют при загрузке.
 
 ~~~json
 {
-  "version": 4,
+  "version": 8,
   "song": "game.ogg",
   "name": "Пример чарта",
   "charter": "Автор чарта",
@@ -592,7 +672,24 @@ geometry_rythm/
 └── data/                       # Чарты, настройки, рекорды, ранги, победы и кэш
 ~~~
 
-Локальные данные: **data/charts/** — чарты, **data/songmeta/** — названия, авторы и обложки песен, **data/songinfo/** — анализ аудио, **data/cache/speed/** — аудио для альтернативной скорости, **data/autosave/** — копии автосохранения, **data/settings.json** — настройки, **data/records.json** — рекорды очков, **data/ranks.json** — лучшие ранги чартов, **data/wins.json** — пройденные чарты, **data/author_colors.json** — цвета групп авторов, **data/achievements_unlocked.json** — открытые достижения.
+Локальные данные также включают **data/ghosts/** — призраки прохождений, **data/library.json** — избранное и история, **data/modifiers.json** — выбор модификаторов по чартам, **data/packs/** — пользовательские пакеты, **data/progress.json** — счётчики прогресса, **data/practice.json** — настройки практики, **data/mods.log** — отчёт загрузки модов и **data/selftest.log** — отчёт самопроверки.
+
+#### Тесты и самопроверка
+
+Запусти встроенную самопроверку из корня проекта:
+
+~~~bash
+python main.py --selftest
+~~~
+
+Она проверяет окружение Python, доступность папок для записи, шрифты, звуковое устройство, моды, чарты, изменение скорости аудио и автоматическое определение ритма. Отчёт сохраняется в **data/selftest.log**.
+
+Для запуска автоматических тестов:
+
+~~~bash
+python -m pip install -r requirements-dev.txt
+python -m pytest tests -q
+~~~
 
 ### Windows-версия (.exe) и распространение
 
@@ -606,7 +703,7 @@ geometry_rythm/
 
 **Музыкальный кредит:** **«YARARARA (ヤラララ)» — автор текста, музыки и аранжировки AnythingBecomeMoe; вокал — Kasane Teto SV2.** [Официальный музыкальный клип на YouTube](https://www.youtube.com/watch?v=T24rF_x0TmQ). Это указание авторства, а не разрешение распространять песню или клип. Музыка, видео, персонажи, иллюстрации и другие сторонние материалы остаются под условиями соответствующих правообладателей.
 
-**Дополнительный музыкальный кредит — «Jukai» автор композиции — **Christopher Baklid**. Трек связан с саундтреком *Lobotomy Corporation* от **Project Moon**. [Страница «Jukai» на SoundCloud автора](https://soundcloud.com/christopherbaklid/jukai). Эта музыка не создана автором Geometry Rhythm и ему не принадлежит. Указание авторства не передаёт права и не разрешает дальнейшее распространение записи; права остаются у соответствующих правообладателей.
+**Дополнительный музыкальный кредит — «Jukai» (в метаданных предоставленного MP3 указано «Jukai - An Arbiter Core Suppresion»):** автор композиции — **Christopher Baklid**. Трек связан с саундтреком *Lobotomy Corporation* от **Project Moon**. [Страница «Jukai» на SoundCloud автора](https://soundcloud.com/christopherbaklid/jukai). Эта музыка не создана автором Geometry Rhythm и ему не принадлежит. Указание авторства не передаёт права и не разрешает дальнейшее распространение записи; права остаются у соответствующих правообладателей.
 
 **Создавать модификации можно бесплатно — на условиях [LICENSE.md](LICENSE.md):**
 - Игру разрешено скачивать и использовать в личных некоммерческих целях, а также создавать собственные модификации.
