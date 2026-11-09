@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <strong>Version 1.0 · Chart format v8 · HD 1280 × 720 / Full HD 1920 × 1080 · Python + Pygame</strong>
+  <strong>Version 1.0 · Pre-release: Playable · Chart format v8 · HD 1280 × 720 / Full HD 1920 × 1080 · Python + Pygame</strong>
 </p>
 
 <p align="center">
@@ -348,9 +348,11 @@ python -m pytest tests -q
 
 ### Windows executable and distribution
 
-There is **no prebuilt Windows .exe** available at the moment. The repository does not include an executable build script or a PyInstaller specification. You may run and modify your own local copy under the terms in [LICENSE.md](LICENSE.md), but distributing or publishing a compiled/repackaged copy of the game requires the author's prior written permission. Please do not expect an official compiled download until the author publishes one.
+A playable **pre-release** is now available: [Geometry-Rhythm V1 (tag: `Playable`)](https://github.com/Mistervock/geometry_rythm/releases/tag/Playable), published on **November 9, 2026**. It is an early release, not a stable/final version.
 
-The [GitHub Releases page](https://github.com/Mistervock/geometry_rythm/releases) may be used for release announcements, but **there is no downloadable .exe right now**.
+The release currently provides one downloadable package: [`geometry-rhythm.zip`](https://github.com/Mistervock/geometry_rythm/releases/download/Playable/geometry-rhythm.zip) (about **119 MiB**). GitHub does not list a separate standalone **.exe** asset; check the ZIP contents for the included application files.
+
+You may run and modify your own local copy under the terms in [LICENSE.md](LICENSE.md). Distributing the game or a compiled/repackaged copy outside the author's published release still requires the author's prior written permission.
 
 ### Credits, copyright, and free mods
 
@@ -693,9 +695,11 @@ python -m pytest tests -q
 
 ### Windows-версия (.exe) и распространение
 
-**Готового Windows-файла .exe пока нет.** В репозитории также нет скрипта сборки исполняемого файла или спецификации PyInstaller. Локально запускать и изменять свою копию можно на условиях [LICENSE.md](LICENSE.md), однако распространять или публиковать скомпилированную/перепакованную игру разрешается только с предварительного письменного разрешения автора. Официальной готовой сборки не будет, пока автор сам её не опубликует.
+Теперь доступен **предварительный релиз**: [Geometry-Rhythm V1 (тег: `Playable`)](https://github.com/Mistervock/geometry_rythm/releases/tag/Playable), опубликованный **9 ноября 2026 года**. Это ранняя игровая сборка, а не финальный стабильный релиз.
 
-Страница [GitHub Releases](https://github.com/Mistervock/geometry_rythm/releases) может использоваться для объявлений о релизах, но **скачать с неё готовый .exe сейчас нельзя**.
+Сейчас в релизе доступен один файл для скачивания: [`geometry-rhythm.zip`](https://github.com/Mistervock/geometry_rythm/releases/download/Playable/geometry-rhythm.zip) (около **119 МиБ**). GitHub не указывает отдельный файл **.exe** среди вложений релиза; проверь содержимое ZIP-архива, чтобы увидеть файлы приложения.
+
+Запускать и изменять локальную копию можно на условиях [LICENSE.md](LICENSE.md). Распространение игры или скомпилированной/перепакованной копии вне опубликованного автором релиза по-прежнему требует предварительного письменного разрешения автора.
 
 ### Авторские права, указание авторства и бесплатные модификации
 
