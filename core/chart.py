@@ -34,8 +34,8 @@ class Note:
         self.held = False
         self.next_tick = 0.0
         self.tail_ok = False
-        self.vis = 0.8          # сглаженная яркость тела удержания (только для отрисовки)
-        self.idx = -1           # номер ноты в отсортированном чарте (для повторов и статистики)
+        self.vis = 0.8
+        self.idx = -1
 
     @property
     def end(self):
@@ -58,7 +58,7 @@ class Note:
 class Chart:
     def __init__(self, song, name="Чарт", notes=None, path=None, events=None,
                  charter="", difficulty=1, folders=None, achievement="", grid=None, chart_id="",
-                 extra=None):
+                 extra=None, modifiers=None, animations=None):
         self.song = song
         self.name = name
         self.charter = charter
@@ -72,8 +72,10 @@ class Chart:
             self.grid.update(grid)
         self.id = chart_id or ""
         self.extra = dict(extra or {})
+        self.modifiers = [dict(m) for m in (modifiers or [])]
+        self.animations = copy.deepcopy(list(animations or []))
         self.path = path
-        self.report = V.Report("chart")     # результат проверки при загрузке (для редактора и подготовки)
+        self.report = V.Report("chart")
         self.source_version = FORMAT_VERSION
 
     #-- Идентичность
@@ -129,6 +131,10 @@ class Chart:
             data["folders"] = self.folders
         if self.achievement:
             data["achievement"] = self.achievement
+        if self.modifiers:
+            data["modifiers"] = [dict(m) for m in self.modifiers]
+        if self.animations:
+            data["animations"] = copy.deepcopy(self.animations)
         return data
 
     @staticmethod
@@ -138,7 +144,8 @@ class Chart:
                       events=copy.deepcopy(clean["events"]), charter=clean["charter"],
                       difficulty=clean["difficulty"], folders=clean["folders"],
                       achievement=clean["achievement"], grid=clean["grid"], chart_id=clean["id"],
-                      extra=copy.deepcopy(clean.get("extra")))
+                      extra=copy.deepcopy(clean.get("extra")),
+                      modifiers=clean.get("modifiers"), animations=clean.get("animations"))
         for i, n in enumerate(chart.notes):
             n.idx = i
         if report is not None:

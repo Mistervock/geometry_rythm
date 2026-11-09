@@ -1,0 +1,49 @@
+{
+  "format": "geometry-rhythm-mod",
+  "api": 1,
+  "id": "example_neon",
+  "name": "Пример: неоновая палитра",
+  "version": "1.0.0",
+  "author": "Geometry Rhythm",
+  "description": "Пример мода: меняет цвета интерфейса и дорожек. Включите, поставив \"enabled\": true.",
+  "enabled": false,
+  "palette": {
+    "CYAN": [
+      255,
+      60,
+      200
+    ],
+    "GOLD": [
+      120,
+      255,
+      140
+    ],
+    "LANE_COLORS": [
+      [
+        255,
+        60,
+        200
+      ],
+      [
+        120,
+        255,
+        140
+      ],
+      [
+        255,
+        200,
+        60
+      ],
+      [
+        120,
+        180,
+        255
+      ]
+    ]
+  },
+  "translations": {
+    "en": {
+      "ИГРАТЬ": "PLAY NOW"
+    }
+  }
+}

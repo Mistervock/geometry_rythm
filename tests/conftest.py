@@ -53,7 +53,12 @@ def data_root(tmp_path, monkeypatch):
     monkeypatch.setattr(progress, "PATH", str(d / "progress.json"))
     monkeypatch.setattr(library, "PATH", str(d / "library.json"))
     monkeypatch.setattr(ghost, "DIR", str(d / "ghosts"))
+    monkeypatch.setattr(ghost, "IMPORT_DIR", str(d / "ghosts" / "import"))
+    monkeypatch.setattr(ghost, "EXPORT_DIR", str(d / "ghosts" / "export"))
+    monkeypatch.setattr(ghost, "CHOICE_PATH", str(d / "ghost_choice.json"))
     monkeypatch.setattr(practice, "PATH", str(d / "practice.json"))
+    import modifiers
+    monkeypatch.setattr(modifiers, "PATH", str(d / "modifiers.json"))
     monkeypatch.setattr(stretch, "DIR", str(d / "speed"))
     monkeypatch.setattr(autosave, "default_dir", lambda: str(d / "autosave"))
     library.reset_for_tests()

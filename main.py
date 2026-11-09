@@ -27,6 +27,9 @@ def main():
     pygame.display.set_caption(C.TITLE)
     clock = pygame.time.Clock()
 
+    import modsys
+    modsys.load()
+
     import cache
     cache.warm()
 
@@ -76,13 +79,13 @@ def main():
 def _guarded():
     """Запуск с журналом падений: в собранном exe без консоли ошибка иначе пропала бы бесследно."""
     for name in ("stdout", "stderr"):
-        if getattr(sys, name) is None:                      # сборка без консоли: print() не должен падать
+        if getattr(sys, name) is None:
             setattr(sys, name, open(os.devnull, "w"))
     try:
         main()
     except SystemExit:
         raise
-    except BaseException:                                   # noqa: BLE001 — записываем и пробрасываем дальше
+    except BaseException:
         import time
         import traceback
         try:
@@ -95,4 +98,7 @@ def _guarded():
 
 
 if __name__ == "__main__":
+    if "--selftest" in sys.argv[1:]:
+        import selftest
+        sys.exit(selftest.run())
     _guarded()

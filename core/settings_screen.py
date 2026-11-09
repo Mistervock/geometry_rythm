@@ -8,6 +8,7 @@ import audio
 import config as C
 import dialogs
 import display
+import fx as FX
 import keymap
 import keys_screen
 import cache
@@ -16,7 +17,7 @@ import settings
 import style as S
 from i18n import t
 
-ROW_H = 29
+ROW_H = 25
 ACTION_H = 40
 ACTION_GAP = 14
 TOP = 96
@@ -36,8 +37,10 @@ ROWS = (
     ("resolution", "Разрешение", "res"),
     ("preview", "Предпрослушивание песен", "switch"),
     ("ghost", "Призрак лучшего прохода", "switch"),
+    ("ghost_alpha", "Прозрачность призрака", "num"),
     ("autosave", "Автосохранение редактора", "switch"),
     ("media_dim", "Затемнение картинок и роликов", "num"),
+    ("fx_quality", "Качество эффектов (0 выкл · 2 высокое)", "num"),
     ("lang", "Язык", "lang"),
     ("reset", "Сбросить настройки", "action"),
     ("back", "НАЗАД", "action"),
@@ -56,6 +59,8 @@ def _value_text(kind_key, idx):
         return f"{w} × {h}"
     if kind_key in ("preview", "ghost", "autosave"):
         return t("Вкл") if settings.get(kind_key) else t("Выкл")
+    if kind_key == "fx_quality":
+        return t(FX.QUALITY_NAMES[FX.QUALITY[int(settings.get(kind_key))]])
     if kind_key.startswith("key"):
         return settings.key_label(settings.get("lane_keys")[int(kind_key[3])]).upper()
     if kind_key == "latency_ms":

@@ -7,15 +7,21 @@ from collections import deque
 
 import pygame
 
+import anim as AN
 import audio
 import cache
 import config as C
 import display
 import engine as EN
 import events as EV
+import fx as FX
 import ghost as GH
 import holdviz
+import modifiers as MD
+import cine as CN
+import packs as PK
 import practice as PR
+import retro
 import scoring
 import settings
 import songs
@@ -54,6 +60,16 @@ class Game:
         self.clock = clock
         self.s = session
         self.chart = session.chart
+        self.anims = AN.by_id(self.chart.animations)
+        self.test = session.test
+        appear = session.practice is None and not session.test
+        self.cine_events = (CN.level_events(COUNTDOWN_MS) if appear else []) + list(session.events)
+        self.cine = CN.build(self.cine_events)
+        self.finish_at = None
+        self.pack_events = session.pack_events
+        self.pack_cache = {}
+        self.cine_skipped = set()
+        self.skip_toast = 0.0
         self.practice = session.practice
         self.speed = session.speed
         self.notes = session.notes
@@ -64,6 +80,8 @@ class Game:
         self.keys = settings.lane_keys()
         self.key_names = settings.get("lane_keys")
         self.scroll = session.scroll
+        self.mods = list(session.mods)
+        self.hidden = MD.has(self.mods, "hidden")
 
         sect = (self.practice.a, self.practice.b) if self.practice else None
         self.engine = EN.Engine(self.notes, session.heals, duration=self.duration,
@@ -127,6 +145,8 @@ class Game:
             specs = (("resume", t("ПРОДОЛЖИТЬ"), C.CYAN), ("restart", t("ЗАНОВО (R)"), C.GREEN),
                      ("setup", t("УЧАСТОК И СКОРОСТЬ"), C.GOLD), ("results", t("ЗАВЕРШИТЬ"), C.PURPLE_LIGHT),
                      ("menu", t("В МЕНЮ"), (255, 160, 90)))
+            if self.test:
+                specs = [s for s in specs if s[0] in ("resume", "restart")] + [("menu", t("В РЕДАКТОР"), (255, 160, 90))]
             self.pause_btns = [(a, S.Btn(SS.UR(640 - 150, 220 + i * 60, 300, 48), label, col, font))
                                for i, (a, label, col) in enumerate(specs)]
 
@@ -147,6 +167,9 @@ class Game:
         self.now = float(start)
         self.ev_queue = deque(ev for ev in self.s.events if ev["t"] > start)
         self.ev_active = [(ev, None) for ev in self.s.events if ev["t"] <= start < ev["t"] + EV.total_ms(ev)]
+        self.pack_cache = {}
+        self.cine_skipped = set()
+        self.skip_toast = 0.0
         self.heal_glitch = 0.0
         self.hp_show = float(e.hp)
         self.score_show = 0.0
@@ -191,6 +214,7 @@ class Game:
         return self.engine.summary()
 
     def result(self):
+        audio.set_duck(1.0)
         e = self.engine
         st = self._final_summary()
         out = {
@@ -206,6 +230,7 @@ class Game:
             "action": "menu" if self.to_menu else "results",
             "stats": st,
             "practice": self.practice is not None,
+            "mods": list(self.mods),
             "notes_hash": self.chart.notes_hash(),
         }
         if self.practice is None:
@@ -217,7 +242,11 @@ class Game:
             out["attempts"] = [{"acc": a["acc"], "score": a["score"], "grade": a["grade"]} for a in self.attempts]
             out["practice_cfg"] = self.practice.to_dict()
             if not self.attempts:
-                out["action"] = "menu"          # ни одного завершённого прохода — показывать нечего
+                out["action"] = "menu"
+        if self.test:
+            out["action"] = "test"
+            out["end_ms"] = int(self.now)
+            out["test_complete"] = not self.to_menu
         return out
 
     #-- Ввод
@@ -231,9 +260,29 @@ class Game:
             elif ev.key in self.keys:
                 lane = self.keys.index(ev.key)
                 self.engine.press(lane, self.song.now())
+            elif ev.key == pygame.K_RETURN:
+                self._skip_transition()
         elif ev.type == pygame.KEYUP and ev.key in self.keys:
             lane = self.keys.index(ev.key)
             self.engine.release(lane, self.song.now())
+
+    def _skip_transition(self):
+        """Enter пропускает переход «открыть» или «акцент», если автор разрешил пропуск. Счёт не меняется."""
+        eid = self.cine.skippable_at(self.now)
+        if eid is not None and eid not in self.cine_skipped:
+            self.cine_skipped.add(eid)
+            self.skip_toast = 0.8
+
+    def _start_finish(self):
+        """Завершение уровня: экран закрывается от текущего состояния, и только когда он закрыт, открывается итог."""
+        self.finish_at = self.now + CN.FINISH_MS
+        self.cine_events.append(CN.finish_event(self.now))
+        self.cine = CN.build(self.cine_events)
+
+    def _duck_music(self, now):
+        """Музыка гаснет вместе с экраном: при закрытом экране тише, при открытом — громкость из настроек."""
+        shown = self.cine.overlay_at(now, self.cine_skipped)
+        audio.set_duck(1.0 - CN.DUCK_DEPTH * (shown[0] if shown else 0.0))
 
     def _pause_event(self, ev, mouse):
         if ev.type == pygame.KEYDOWN:
@@ -289,7 +338,7 @@ class Game:
         self.finished = True
 
     def _restart(self):
-        self._begin()                               # незавершённый проход в статистику не попадает
+        self._begin()
 
     def _edit_section(self):
         """Пауза → экран выбора участка: можно изменить границы, скорость, цикл и потерю HP."""
@@ -379,7 +428,7 @@ class Game:
         self.now = now
 
         if not self.music_started and now >= self.seg0:
-            audio.play_song(self.s.play_file, max(self.seg0, now) / self.speed)    # догоняем кадр запаздывания: звук точно по часам
+            audio.play_song(self.s.play_file, max(self.seg0, now) / self.speed)
             self.music_started = True
         if self.practice is None:
             for word, start, _ in COUNTDOWN_WORDS:
@@ -387,6 +436,11 @@ class Game:
                     self.words_played.add(word)
                     audio.play("upgrade" if word == "RYTHM!" else "tick", 0.5)
 
+        if self.finish_at is not None and now >= self.finish_at:
+            self.finished = True
+            audio.stop_song()
+            return
+        self._duck_music(now)
         e.update(now)
         if e.done:
             self._on_done()
@@ -396,7 +450,6 @@ class Game:
 
         while self.ev_queue and now >= self.ev_queue[0]["t"]:
             ev = self.ev_queue.popleft()
-            # картинки и ролики подготовлены заранее (session); рисуются через EV.draw_media
             self.ev_active.append((ev, None))
         self.ev_active = [(ev, s) for ev, s in self.ev_active if now - ev["t"] < EV.total_ms(ev)]
 
@@ -425,12 +478,14 @@ class Game:
         self.popups = [p for p in self.popups if p["age"] < 0.7]
         if self.restart_toast > 0:
             self.restart_toast -= dt
+        if self.skip_toast > 0:
+            self.skip_toast -= dt
 
     def _on_done(self):
         e = self.engine
         if self.practice is None:
-            self.finished = True
-            audio.stop_song()
+            if self.finish_at is None:
+                self._start_finish()
             return
         if e.judgments:
             self.attempts.append(e.summary())
@@ -448,6 +503,39 @@ class Game:
         i = int(ms / 1000.0 * self.energy_fps)
         i = max(0, min(len(self.energy) - 1, i))
         return self.energy[i] / 100.0
+
+    def _draw_packs(self, c, now):
+        """Пакеты визуальных эффектов: до MAX_ACTIVE одновременно, новые важнее старых."""
+        if not self.pack_events:
+            return
+        live = []
+        for idx, ev in self.pack_events:
+            el = now - ev["t"]
+            if 0 <= el < ev["dur"]:
+                live.append((ev["t"], idx, ev, el))
+        if not live:
+            return
+        live.sort(key=lambda r: (r[0], r[1]))
+        for _, idx, ev, el in live[-PK.MAX_ACTIVE:]:
+            inst = self.pack_cache.get(idx)
+            if inst is None:
+                pack = PK.get(ev.get("pack", ""))
+                if pack is None:
+                    continue
+                seed = ev["t"] * 1000 + idx * 7919
+                inst = PK.make_instance(pack, ev.get("params"), ev.get("power", 100), ev.get("colour", 0),
+                                        seed, ev["dur"])
+                self.pack_cache[idx] = inst
+            ox, oy = self._pack_origin(ev)
+            inst.draw(c, el, ox, oy)
+
+    def _pack_origin(self, ev):
+        lane = ev.get("lane", 0)
+        if lane:
+            x, y = self._lane_x(lane - 1), C.HIT_Y
+        else:
+            x, y = C.WIDTH // 2, C.HEIGHT // 2
+        return int(x + SS.U(ev.get("x", 0))), int(y + SS.U(ev.get("y", 0)))
 
     def _lane_x(self, lane):
         return C.FIELD_X + lane * (C.LANE_W + C.LANE_GAP) + C.LANE_W // 2
@@ -468,6 +556,7 @@ class Game:
         self._draw_notes(c, now)
         self._draw_heals(c, now)
         self._draw_fx(c)
+        self._draw_packs(c, now)
         self._draw_ghost(c, now)
         self._draw_cards(c, now)
         self._draw_hud(c, now)
@@ -478,6 +567,8 @@ class Game:
         dy = random.randint(-SS.U(2), SS.U(2)) if self.shake_t > 0 else 0
         scr = self._screen()
         scr.blit(c, (dx, dy))
+        if self.cine.cam:
+            CN.apply_camera(scr, self.cine.camera_at(now), smooth=FX.budget().mode() == "high")
         EV.apply_invert(scr, self._event_invert(now))
         glitch = max(self.shake_t / 0.25 if self.shake_t > 0 else 0.0, self._event_glitch(now),
                      self.heal_glitch / 0.35 * 0.7)
@@ -487,6 +578,10 @@ class Game:
         if flash > 0:
             self.white.set_alpha(int(255 * 0.85 * flash))
             scr.blit(self.white, (0, 0))
+        CN.apply_overlay(scr, self.cine.overlay_at(now, self.cine_skipped))
+        FX.frame(scr, FX.active_levels([ev for ev, _ in self.ev_active], now, self.chart.grid), now)
+        if self.skip_toast > 0:
+            S.blit_text(scr, S.font(18, True), t("ПРОПУЩЕНО"), C.WHITE, C.WIDTH // 2, SS.U(120))
         S.post_fx(scr, self.frame, grain=40)
 
         if self.paused:
@@ -512,7 +607,7 @@ class Game:
     def _draw_images(self, c, now):
         for ev, _ in self.ev_active:
             if ev["type"] in ("image", "video"):
-                EV.draw_media(c, ev, now - ev["t"])
+                EV.draw_media(c, ev, now - ev["t"], self.anims)
 
     def _draw_lanes(self, c):
         for i in range(4):
@@ -521,6 +616,7 @@ class Game:
             band = cache.band(i)
             band.set_alpha(int(12 + 55 * self.glow[i]))
             c.blit(band, (x, 0))
+            c.blit(retro.dither(C.LANE_W, C.HEIGHT, col, 10), (x, 0))
             pygame.draw.line(c, _mix(C.GRID_COL, col, 0.35), (x, 0), (x, C.HEIGHT), SS.U(1))
             pygame.draw.line(c, _mix(C.GRID_COL, col, 0.35), (x + C.LANE_W, 0),
                              (x + C.LANE_W, C.HEIGHT), SS.U(1))
@@ -534,6 +630,7 @@ class Game:
             pygame.draw.rect(c, _lighten(_mix(C.BG_DARK, col, 0.25 + 0.5 * k), 0.2 * k),
                              pad, border_radius=SS.U(8))
             pygame.draw.rect(c, _lighten(_mix(C.DIM, col, 0.6), 0.6 * k), pad, SS.U(2), border_radius=SS.U(8))
+            retro.brackets(c, pad.inflate(SS.U(8), SS.U(8)), _lighten(col, 0.25 + 0.5 * k), SS.U(9), SS.U(2))
             label = cache.text(18, True, settings.key_label(self.key_names[i]), col)
             c.blit(label, (x + C.LANE_W // 2 - label.get_width() // 2, C.HIT_Y + SS.U(40)))
 
@@ -555,14 +652,17 @@ class Game:
                 dt = n.t - now
                 if dt > self.scroll + 120:
                     continue
+                hf = MD.hidden_alpha(dt, self.scroll) if self.hidden else 1.0
+                if hf <= 0.0:
+                    continue
                 y = C.HIT_Y - dt * speed
                 if n.dur > 0:
                     tail = C.HIT_Y - (n.end - now) * speed
                     if y >= -SS.U(40):
-                        self._draw_body(c, n, lane, y, tail, 0.8)
+                        self._draw_body(c, n, lane, y, tail, 0.8 * hf)
                 if y < -SS.U(40):
                     continue
-                alpha = int(255 * S.clamp((y + SS.U(40)) / SS.U(110)))
+                alpha = int(255 * S.clamp((y + SS.U(40)) / SS.U(110)) * hf)
                 self._blit_note(c, lane, cx, y, 1.0, alpha)
             elif st == "hold":
                 tail = C.HIT_Y - (n.end - now) * speed
@@ -636,6 +736,9 @@ class Game:
             if a <= 0:
                 continue
             label = cache.text(22, True, p["text"], p["col"])
+            shade = cache.text(22, True, p["text"], (0, 0, 0))
+            shade.set_alpha(int(a * 0.6))
+            c.blit(shade, (p["x"] - label.get_width() // 2 + SS.U(2), y - label.get_height() // 2 + SS.U(2)))
             label.set_alpha(a)
             c.blit(label, (p["x"] - label.get_width() // 2, y - label.get_height() // 2))
             if p["sub"]:
@@ -653,7 +756,7 @@ class Game:
             if not 0 <= age < 1:
                 continue
             col = C.RED_LIGHT if code == "m" else (200, 200, 220)
-            a = int(150 * (1 - age))
+            a = int(150 * (1 - age) * settings.get("ghost_alpha") / 100)
             rad = SS.U(26) + int(SS.U(10) * age)
             ring = cache.ring(col, rad)
             ring.set_alpha(a)
@@ -730,6 +833,16 @@ class Game:
         acc_txt = S.font(14).render(f"{t('ТОЧНОСТЬ')} {e.accuracy():5.1f}%" if e.judgments
                                     else f"{t('ТОЧНОСТЬ')}   0.0%", True, C.GREY)
         c.blit(acc_txt, (C.WIDTH - acc_txt.get_width() - u(20), u(42)))
+        wmax = max(score_txt.get_width(), acc_txt.get_width())
+        retro.brackets(c, pygame.Rect(C.WIDTH - u(20) - wmax - u(12), u(4), wmax + u(24), u(64)),
+                       C.DIM, u(10), u(2))
+
+        if self.mods and self.practice is None:
+            mtxt = S.font(13, True).render(MD.describe(self.mods), True, C.CYAN)
+            mbadge = pygame.Rect(u(20), u(12) if not show_hp else u(36), mtxt.get_width() + u(24), u(22))
+            pygame.draw.rect(c, (0, 24, 30), mbadge, border_radius=u(4))
+            pygame.draw.rect(c, C.CYAN, mbadge, u(2), border_radius=u(4))
+            c.blit(mtxt, (mbadge.centerx - mtxt.get_width() // 2, mbadge.centery - mtxt.get_height() // 2))
 
         if self.gview is not None:
             self._draw_ghost_panel(c)
@@ -769,7 +882,11 @@ class Game:
                        self.frame % 200, length=40)
         for _, btn in self.pause_btns:
             btn.draw(scr, mouse)
-        hint = t("P / ESC — продолжить, M — в меню") if self.practice is None \
-            else t("P / ESC — продолжить, R — заново, M — в меню")
+        if self.test:
+            hint = t("P / ESC — продолжить, R — заново, M — в редактор")
+        elif self.practice is None:
+            hint = t("P / ESC — продолжить, M — в меню")
+        else:
+            hint = t("P / ESC — продолжить, R — заново, M — в меню")
         S.blit_text(scr, S.font(14), hint, C.GREY, C.WIDTH // 2,
                     SS.U(446) if self.practice is None else SS.U(540))

@@ -12,9 +12,28 @@ import math
 
 import validation as V
 
+
+_busy = False
+
+
+def _t(text):
+    """Перевод сообщения. Импорт локальный (i18n тянет settings, а settings читает файлы через этот модуль).
+    Повторный вход возвращает русский текст — так цикл settings → jsonio → _t не образуется."""
+    global _busy
+    if _busy:
+        return text
+    _busy = True
+    try:
+        from i18n import t
+        return t(text)
+    except Exception:
+        return text
+    finally:
+        _busy = False
+
 BEAT_DIVISIONS = (1, 2, 3, 4, 6, 8, 12, 16, 24, 32)
 MS_STEPS = (10, 25, 50, 100, 200)
-MAX_DRAW_LINES = 1500           # если линий больше, мелкие уровни не рисуем (иначе экран — сплошная заливка)
+MAX_DRAW_LINES = 1500
 
 BAR, BEAT, SUB = "bar", "beat", "sub"
 
@@ -63,7 +82,7 @@ class BeatGrid:
         return float(self.ms_step)
 
     def label(self):
-        return f"1/{self.div}" if self.mode == "beat" else f"{self.ms_step} мс"
+        return f"1/{self.div}" if self.mode == "beat" else f"{self.ms_step} {_t('мс')}"
 
     def spec(self):
         return (self.mode, self.div if self.mode == "beat" else self.ms_step)
@@ -71,7 +90,7 @@ class BeatGrid:
     def specs(self):
         out = [("beat", n) for n in BEAT_DIVISIONS]
         if self.mode == "beat" and self.div not in BEAT_DIVISIONS:
-            out.append(("beat", self.div))       # пользовательское деление остаётся в цикле
+            out.append(("beat", self.div))
             out.sort(key=lambda s: (s[0] != "beat", s[1]))
         out += [("ms", n) for n in MS_STEPS]
         if self.mode == "ms" and self.ms_step not in MS_STEPS:
@@ -165,7 +184,6 @@ class BeatGrid:
                 if kind is not None:
                     out.append((self.time_at(i), kind))
             return out
-        # режим «миллисекунды»: только мелкие линии, если их не слишком много
         if self.show_sub and (t_hi - t_lo) / step <= MAX_DRAW_LINES:
             i0 = int(math.floor((t_lo - self.offset) / step))
             i1 = int(math.ceil((t_hi - self.offset) / step))

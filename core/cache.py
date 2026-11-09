@@ -38,8 +38,14 @@ def _build_note(lane, scale):
     kind = C.LANE_SHAPES[lane]
     for i in range(3):
         pygame.draw.circle(layer, (*col, 18), (ox, oy), int(r * 1.5) - i * 4)
-    pts = [(x + ox, y + oy) for x, y in S._shape_points(kind, 0, 0, r)]
+    rel = S._shape_points(kind, 0, 0, r)
+    shadow = [(ox + x * 1.10 + r * 0.05, oy + y * 1.10 + r * 0.10) for x, y in rel]
+    pygame.draw.polygon(layer, (0, 0, 0, 110), shadow)
+    pts = [(x + ox, y + oy) for x, y in rel]
     pygame.draw.polygon(layer, (*col, 170), pts)
+    light = tuple(int(c + (255 - c) * 0.55) for c in col)
+    facet = [(ox + x * 0.55, oy + y * 0.55 - r * 0.22) for x, y in rel]
+    pygame.draw.polygon(layer, (*light, 110), facet)
     pygame.draw.polygon(layer, (*C.WHITE, 255), pts, 2)
     return layer
 
@@ -76,7 +82,7 @@ def warm():
         _texts[(COUNTDOWN_SIZE, True, name, col)] = _bake_text(COUNTDOWN_SIZE, True, name, col)
         _texts[(COUNTDOWN_SIZE, True, name, C.CYAN)] = _bake_text(COUNTDOWN_SIZE, True, name, C.CYAN)
     _texts[(14, False, t("ESC — пауза"), (90, 90, 120))] = _bake_text(14, False, t("ESC — пауза"), (90, 90, 120))
-    for size in range(22, 29):  # размеры комбо меняются от удара к удару
+    for size in range(22, 29):
         S.font(size, True)
     _warm_keys.clear()
     _warm_keys.update(_texts)
@@ -108,7 +114,6 @@ def text(font_size, bold, value, color):
     surf = _texts.get(key)
     if surf is None:
         if len(_texts) >= TEXT_LIMIT:
-            # сбрасываем только подписи, которых не было при прогреве (например, «+12 ms»)
             for k in [k for k in _texts if k not in _warm_keys]:
                 del _texts[k]
         surf = _bake_text(font_size, bold, value, color)

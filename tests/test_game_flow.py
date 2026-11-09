@@ -71,7 +71,6 @@ def tap(g, lane, hold_ms=0):
 def test_full_run_perfect(env):
     ch = mkchart([(1000, 0, 0), (1500, 1, 800), (3000, 2, 0), (3500, 3, 0)])
     g, ft = make_game(ch)
-    # дойти до первой ноты: старт -3000 → нота в +1000
     step(g, ft, 4000 - 4)
     tap(g, 0)
     step(g, ft, 500)
@@ -104,14 +103,13 @@ def test_practice_loop_resets_everything(env):
     cfg = PR.PracticeConfig(1500, 4000, 0.5, True, False).fit(20000)
     g, ft = make_game(ch, cfg)
     assert g.engine.total == 3 and g.song.speed == 0.5
-    step(g, ft, 5000)                    # без нажатий: все ноты участка пропущены → повтор
+    step(g, ft, 5000)
     assert len(g.attempts) >= 1
     assert g.engine.attempt >= 3 and g.engine.counts["miss"] <= 2
     a0 = g.attempts[0]
     assert a0["counts"]["miss"] == 3 and not a0["failed"]
     assert g.engine.score == 0 and not g.engine.holds and len(g.s.events) == 0
     assert sum(1 for n in g.notes if n.state == "skip") == 1
-    # повтор не дублирует ноты и события
     assert sum(len(q) for q in g.engine.pending) <= 3
 
 
@@ -130,7 +128,6 @@ def test_speed_keeps_notes_in_sync(env):
     ch = mkchart([(4000, 0, 0)])
     cfg = PR.PracticeConfig(3000, 6000, 0.5, False, False).fit(20000)
     g, ft = make_game(ch, cfg)
-    # начало часов = a - preroll = 1000 мс чарта; на скорости 0.5 до ноты 3000 мс чарта = 6 с реальных
     step(g, ft, 3000 - 16)
     tap(g, 0)
     assert g.engine.counts["perfect"] + g.engine.counts["great"] + g.engine.counts["good"] == 1

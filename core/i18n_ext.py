@@ -3,14 +3,31 @@
 Подмешиваются в i18n.EN при импорте i18n (см. конец i18n.py). Ключ — русский текст, значение — английский."""
 
 EXT = {
-    # события: на весь экран
+    "файл не найден": "file not found", "не UTF-8": "not UTF-8", "файл пуст": "file is empty",
+    "слишком глубокая вложенность": "nesting is too deep", "недопустимое значение": "invalid value",
+    "неожиданный тип данных": "unexpected data type", "данные нельзя сохранить": "data cannot be saved",
+    "не файл призрака": "not a ghost file", "нет версии": "no version", "поле": "field",
+    "очки или точность": "score or accuracy", "комбо или ранг": "combo or rank",
+    "запись timeline": "timeline entry", "запись marks": "marks entry",
+    "не файл автосохранения": "not an autosave file",
+    "неподдерживаемая версия автосохранения": "unsupported autosave version",
+    "чарт ещё ни разу не сохранялся": "the chart has never been saved",
+    "исходного файла чарта больше нет": "the original chart file no longer exists",
+    "файл с этим именем теперь содержит другой чарт": "the file with this name now holds a different chart",
+    "исходный чарт изменился после начала редактирования": "the original chart changed after editing started",
+    "автосохранение старого формата": "autosave in an old format", "восстан.": "restored",
+    "Авто": "Auto", "импорт": "import", "Авто-ритм": "Auto beat",
+    "АВТО-РИТМ": "AUTO BEAT", "Анализ ритма…": "Analysing the beat…",
+    "Ритм не найден: сетку задайте вручную": "No beat found: set the grid by hand",
+    "смещение": "offset", "уверенность": "confidence",
+    "ФИЛЬТР": "FILTER", "Показаны только": "Showing only", "Фильтр снят": "Filter cleared",
+    "↑↓ PgUp PgDn Home End · Enter папка · Tab поле · ←→ изменить (Shift ×5) · 1–8 добавить · клик по счётчику — фильтр · P просмотр":
+        "↑↓ PgUp PgDn Home End · Enter folder · Tab field · ←→ change (Shift ×5) · 1–8 add · click a count — filter · P preview",
     "Растянуть на весь экран": "Stretch to full screen",
     "На весь экран: ДА": "Full screen: ON", "На весь экран: НЕТ": "Full screen: OFF",
     "ДА — картинка или ролик растягиваются на весь экран (пропорции не сохраняются, размер и смещение не используются)":
         "ON — the picture or video is stretched over the whole screen (proportions are not kept; size and offset are not used)",
-    # достижения
     "ЗА ЧАРТЫ": "CHART ACHIEVEMENTS", "ВСТРОЕННЫЕ": "BUILT-IN",
-    # редактор: сообщения
     "SPACE играть · ←→ курсор · PgUp/PgDn ±5 с · -/= скорость · G привязка · H деление · Del удалить · F1 помощь":
         "SPACE play · ←→ cursor · PgUp/PgDn ±5 s · -/= speed · G snap · H division · Del delete · F1 help",
     "ПРОВЕРКА ЧАРТА": "CHART CHECK", "Здесь уже есть нота": "There is already a note here",
@@ -36,10 +53,10 @@ EXT = {
     "Есть несохранённые изменения. Выйти без сохранения? Автосохранение будет удалено.":
         "There are unsaved changes. Quit without saving? The autosave will be deleted.",
     "ВЫЙТИ": "QUIT", "ОСТАТЬСЯ": "STAY", "Деление": "Division", "Удалено нот": "Notes deleted",
+    "ПОКИНУТЬ ИГРУ?": "QUIT THE GAME?", "ПОКИНУТЬ": "QUIT", "ENTER — выбрать, ESC — остаться": "ENTER — select, ESC — stay",
     "ВСЕ": "ALL", "ДОЛИ": "BEATS", "ТАКТЫ": "BARS", "СКРЫТЬ": "HIDE",
     "ПРИВЯЗКА": "SNAP", "СМЕЩЕНИЕ": "OFFSET", "ДЕЛЕНИЕ": "DIVISION", "ДОЛЕЙ В ТАКТЕ": "BEATS PER BAR",
     "ЛИНИИ": "LINES", "НАЧАЛО ← КУРСОР": "ORIGIN ← CURSOR",
-    # подсказка F1
     "ЛКМ · Shift+рамка": "LMB · Shift+box", "нота / выделить рамкой": "note / box select",
     "ЛКМ-тяга": "LMB drag", "переместить ноту, хвост — длительность": "move a note; tail = length",
     "курсор (шаг сетки)": "cursor (grid step)", "масштаб (Ctrl+колесо)": "zoom (Ctrl+wheel)",
@@ -50,7 +67,6 @@ EXT = {
     "удалить ноту / выделение": "delete note / selection", "отмена / повтор": "undo / redo",
     "выделить все / копировать / вставить": "select all / copy / paste", "подсказка · FPS": "help · FPS",
     "играть / пауза": "play / pause", "поставить ноту на дорожку": "place a note on a lane",
-    # команды истории
     "Добавить ноты": "Add notes", "Удалить ноты": "Delete notes", "Изменить ноты": "Edit notes",
     "Заменить все ноты": "Replace all notes", "Изменить события": "Edit events",
     "Изменить свойства чарта": "Edit chart properties", "Пакетная правка": "Batch edit",
@@ -58,7 +74,6 @@ EXT = {
     "Длительность удержания": "Hold length", "Смещение сетки": "Grid offset", "Перемещение нот": "Move notes",
     "Деление сетки": "Grid division", "Размер такта": "Bar size", "Свойства чарта": "Chart properties",
     "Сдвиг всех нот": "Shift all notes", "Название чарта": "Chart name", "Привязка к сетке": "Grid snap",
-    # клавиши
     "Избранное: песня / чарт": "Favorite: song / chart", "Только избранное": "Favorites only", "Практика": "Practice",
     "Привязка к сетке вкл / выкл": "Grid snap on / off", "Повтор (с Ctrl)": "Redo (with Ctrl)",
     "Выделить все ноты (с Ctrl)": "Select all notes (with Ctrl)", "Копировать выделение (с Ctrl)": "Copy selection (with Ctrl)",
@@ -67,7 +82,6 @@ EXT = {
     "Выделенное на дорожку левее": "Selection one lane left", "Выделенное на дорожку правее": "Selection one lane right",
     "Привязать выделенное к сетке": "Snap selection to grid", "Следующее деление сетки": "Next grid division",
     "Тап-темп (BPM)": "Tap tempo (BPM)",
-    # игра и практика
     "P / ESC — продолжить, R — заново, M — в меню": "P / ESC — resume, R — restart, M — menu",
     "ПОВТОР": "REPEAT", "ESC — пауза · R — заново": "ESC — pause · R — restart", "ЗАНОВО (R)": "RESTART (R)",
     "УЧАСТОК И СКОРОСТЬ": "SECTION & SPEED", "ЗАВЕРШИТЬ": "FINISH", "ПРАКТИКА": "PRACTICE",
@@ -76,7 +90,6 @@ EXT = {
         "A / B / Tab — marker · ←→ ±0.25 s (Shift ±1 s, Ctrl ±10 ms) · mouse — drag · 1–4 speed · ENTER start",
     "Результаты практики не попадают в рекорды и достижения": "Practice results do not count for records or achievements",
     "длина": "length", "ЦИКЛ": "LOOP", "ПОТЕРЯ HP": "HP LOSS",
-    # результаты
     "ИЗМЕНИТЬ УЧАСТОК": "CHANGE SECTION", "SPACE — ещё раз, S — участок, M — в меню, TAB — подробно":
         "SPACE — again, S — section, M — menu, TAB — details",
     "SPACE — ещё раз, M — в меню, TAB — подробно": "SPACE — again, M — menu, TAB — details",
@@ -98,7 +111,6 @@ EXT = {
         "Ghost is outdated: the chart changed after the record — play the chart again",
     "Файл призрака повреждён и убран в карантин": "The ghost file is damaged and was moved to quarantine",
     "Призрак создан более новой версией игры": "The ghost was made by a newer game version",
-    # подготовка
     "ПОДГОТОВКА": "PREPARING", "ESC / ENTER — назад": "ESC / ENTER — back", "В чарте нет нот": "The chart has no notes",
     "Чарт не проходит проверку": "The chart failed validation", "Песня не найдена": "Song not found",
     "Не удалось прочитать песню": "Could not read the song",
@@ -110,7 +122,6 @@ EXT = {
     "Ролики недоступны: установите opencv": "Videos unavailable: install opencv",
     "Проверка чарта": "Chart check", "Проверка песни": "Song check", "Построение структур": "Building structures",
     "Картинки и ролики событий": "Event images and videos", "Подготовка звука": "Preparing audio", "мс": "ms",
-    # история, избранное
     "не завершён": "not finished", "ОЧИСТИТЬ": "CLEAR", "ИСТОРИЯ": "HISTORY", "Запись удалена": "Entry deleted",
     "История пуста — сыграйте первый чарт": "History is empty — play your first chart",
     "Песня или чарт больше не найдены": "Song or chart no longer found",
@@ -120,7 +131,6 @@ EXT = {
     "Чарт убран из избранного": "Chart removed from favorites", "Песня добавлена в избранное": "Song added to favorites",
     "Песня убрана из избранного": "Song removed from favorites", "Показано только избранное": "Showing favorites only",
     "Показаны все песни": "Showing all songs",
-    # восстановление
     "Редактор был закрыт без сохранения.": "The editor was closed without saving.", "ВОССТАНОВИТЬ": "RESTORE",
     "УДАЛИТЬ КОПИЮ": "DELETE COPY", "ПОТОМ": "LATER", "ВОССТАНОВЛЕНИЕ": "RECOVERY",
     "Найдено повреждённое автосохранение — восстановить его нельзя.": "A damaged autosave was found — it cannot be restored.",
@@ -140,7 +150,152 @@ EXT = {
     "Песня чарта не найдена в songs/:": "The chart's song was not found in songs/:",
     "Автосохранение сохранено — добавьте песню и повторите.": "The autosave is kept — add the song and try again.",
     "Автосохранение не удалось прочитать:": "Could not read the autosave:", "Исходный чарт не открывается:": "The original chart cannot be opened:",
-    # настройки
     "Призрак лучшего прохода": "Best-run ghost", "Автосохранение редактора": "Editor autosave",
     "Вкл": "On", "Выкл": "Off", "ВКЛ": "ON", "ВЫКЛ": "OFF",
+    "МОДИФИКАТОРЫ": "MODIFIERS", "МОДИФ.": "MODS", "ЗЕРКАЛО": "MIRROR", "СКОРОСТЬ": "SPEED", "СКРЫТЫЕ": "HIDDEN",
+    "ПО УМОЛЧАНИЮ": "DEFAULT", "ГОТОВО": "DONE",
+    "Дорожки отзеркалены: ноты приходят справа налево": "Lanes are mirrored: notes come from the right",
+    "Ноты летят быстрее или медленнее; музыка не меняется": "Notes fly faster or slower; the music stays the same",
+    "Ноты появляются только в последней трети пути до линии попадания": "Notes appear only in the last third of their path to the hit line",
+    "Рекорды и призраки ведутся отдельно для каждого набора": "Records and ghosts are kept separately for each set",
+    "Модификаторы сохранены для этого чарта": "Modifiers saved for this chart",
+    "Дорожка показана": "Track shown",
+    "Дорожка скрыта: её события не видны в списке, но играются": "Track hidden: its events are not listed, but they play",
+    "Shift+клик или Shift+↑↓ — выбрать несколько · Ctrl+A — все видимые · V — скрыть дорожку · T — тип": "Shift+click or Shift+↑↓ — select several · Ctrl+A — all visible · V — hide track · T — type",
+    "Выбрано": "Selected", "Изменено": "Changed", "Тип дорожки": "Track type", "Выбор снят": "Selection cleared",
+    "V — показать или скрыть · T — сменить тип · Enter — свернуть": "V — show or hide · T — change type · Enter — collapse",
+    "Копий": "Copies", "Перемещено": "Moved", "Вынуто из папок": "Taken out of folders", "ТИП": "TYPE",
+    "Удалить выбранные события: {n}?": "Delete the selected events: {n}?",
+    "Заблокировано": "Locked", "Разблокировано": "Unlocked", "Показана в списке": "Shown in list",
+    "СКРЫТА": "HIDDEN", "СКРЫТЬ": "HIDE", "ПОКАЗАТЬ": "SHOW",
+    "ЭФФЕКТЫ": "EFFECTS", "ОФОРМЛЕНИЕ": "DECOR", "СВОБОДНАЯ": "CUSTOM",
+    "Призрак записан с другими модификаторами и не показан": "Ghost was recorded with other modifiers and is not shown",
+    "Импортированный призрак не подходит к этому чарту: игра без призрака": "The imported ghost does not fit this chart: playing without a ghost",
+    "Свой лучший проход": "Your best run", "Без призрака": "No ghost",
+    "ЭКСПОРТ СВОЕГО ПРИЗРАКА": "EXPORT YOUR GHOST", "ОБНОВИТЬ ПАПКУ ИМПОРТА": "RESCAN IMPORT FOLDER",
+    "Папка импорта обновлена": "Import folder rescanned",
+    "Этот призрак не подходит к чарту или набору модификаторов": "This ghost does not fit the chart or the modifier set",
+    "ПРИЗРАК": "GHOST",
+    "Файлы призраков кладите в data/ghosts/import/ · Enter — выбрать · Esc — отмена": "Put ghost files into data/ghosts/import/ · Enter — choose · Esc — cancel",
+    "пока нет": "none yet", "Своего призрака для этого набора пока нет": "There is no ghost of your own for this modifier set yet",
+    "НЕ ПРОВЕРЕНО": "NOT VERIFIED", "Экспорт": "Export", "Призрак для этого чарта выбран": "Ghost for this chart chosen",
+    "другие ноты — не подходит": "other notes — does not fit",
+    "другие модификаторы — не подходит": "other modifiers — does not fit",
+    "файл повреждён": "file is damaged", "записан новой версией игры": "recorded by a newer game version",
+    "не подходит": "does not fit", "Прозрачность призрака": "Ghost opacity",
+    "ЛИНЕЙНО": "LINEAR", "РАЗГОН": "EASE IN", "ТОРМОЖЕНИЕ": "EASE OUT", "МЯГКО": "SMOOTH", "СТУПЕНЬКА": "STEP",
+    "РАЗМЫТИЕ": "BLUR", "СВЕЧЕНИЕ": "GLOW", "ХРОМАТИКА": "CHROMATIC", "ВОЛНА": "WAVE", "ТЁПЛЫЙ": "WARM",
+    "ХОЛОДНЫЙ": "COOL", "ЧЁРНО-БЕЛЫЙ": "B&W", "НИЗКОЕ": "LOW", "ВЫСОКОЕ": "HIGH",
+    "Качество эффектов (0 выкл · 2 высокое)": "Effects quality (0 off · 2 high)",
+    "ЭФФЕКТ": "EFFECT", "+ ЭФФЕКТ": "+ EFFECT", "АНИМАЦИИ": "ANIMATIONS",
+    "Эффект на весь экран: размытие, свечение, хроматика, волна или цветовой фильтр. «В ТАКТ» делает пульс по сетке.":
+        "Full-screen effect: blur, glow, chromatic aberration, wave or colour filter. «В ТАКТ» pulses it to the grid.",
+    "Сила эффекта «ОБЪЕКТ», %": "«OBJECT» effect strength, %",
+    "Нарастание, мс": "Fade-in, ms",
+    "РЕЗКО — появилась и пропала; ПЛАВНО — с затуханием; ДВИЖЕНИЕ — плывёт. Не действует, если выбрана анимация из чарта":
+        "SHARP — appears and vanishes; SMOOTH — fades; MOVE — drifts. No effect when a chart animation is picked",
+    "Анимация из чарта: движение, масштаб, поворот, цвет по ключам. НЕТ — работают пресеты выше. M — открыть редактор анимаций":
+        "Chart animation: movement, scale, rotation, colour by keys. NO — the presets above apply. M — open the animation editor",
+    "Эффект самой картинки или ролика: размытие, свечение, хроматика, волна, тёплый, холодный, чёрно-белый":
+        "Effect on the picture or video itself: blur, glow, chromatic, wave, warm, cool, black and white",
+    "Сила эффекта «ОБЪЕКТ» в процентах": "«OBJECT» effect strength in percent",
+    "Сила эффекта на весь экран в процентах": "Full-screen effect strength in percent",
+    "За сколько мс эффект нарастает и спадает": "Over how many ms the effect fades in and out",
+    "Вид эффекта на весь экран: размытие, свечение, хроматика, волна, тёплый, холодный, чёрно-белый":
+        "Full-screen effect kind: blur, glow, chromatic, wave, warm, cool, black and white",
+    "ДА — сила пульсирует по сетке: сильнее на ударе, слабее между ударами (нужен темп в сетке)":
+        "YES — strength pulses with the grid: stronger on the beat, weaker between beats (needs a tempo in the grid)",
+    "Вернулись из редактора анимаций": "Back from the animation editor",
+    "Эффекты выключены в настройках": "Effects are off in settings",
+    "Анимация из чарта": "Chart animation",
+    "Эффект объекта": "Object effect",
+    "Вид эффекта": "Effect kind",
+    "В такт (пульс по сетке)": "On the beat (grid pulse)",
+    "↑↓ PgUp PgDn Home End · Enter папка · Tab поле · ←→ изменить (Shift ×5) · 1–9 добавить · M анимации · клик по счётчику — фильтр · P просмотр":
+        "↑↓ PgUp PgDn Home End · Enter folder · Tab field · ←→ change (Shift ×5) · 1–9 add · M animations · click a counter — filter · P preview",
+    "Пробел — ▶ / пауза · , и . — сдвиг времени (Shift ×10) · [ и ] — соседний ключ · K — ключ здесь · Del — удалить ключ":
+        "Space — ▶ / pause · , and . — shift time (Shift ×10) · [ and ] — neighbour key · K — key here · Del — delete key",
+    "↑↓ — поле · ←→ — изменить (Shift ×5) · Enter — ввести число · L — повтор · Tab — другая анимация · N — новая":
+        "↑↓ — field · ←→ — change (Shift ×5) · Enter — type a number · L — loop · Tab — other animation · N — new",
+    "Клик по таймлайну ставит время, перетаскивание ключа двигает его · R — переименовать · ESC — назад":
+        "Click the timeline to set time, drag a key to move it · R — rename · ESC — back",
+    "Повтор с начала": "Loop from start", "Время ключа, мс": "Key time, ms",
+    "Переход до следующего ключа": "Easing to the next key", "Масштаб, %": "Scale, %", "Поворот, °": "Rotation, °",
+    "Прозрачность, %": "Opacity, %", "Цвет: красный": "Colour: red", "Цвет: зелёный": "Colour: green",
+    "Цвет: синий": "Colour: blue",
+    "Новая анимация создана": "New animation created", "Анимация скопирована": "Animation copied",
+    "Анимация удалена": "Animation deleted", "+ НОВАЯ": "+ NEW", "▶ ИГРАТЬ": "▶ PLAY", "‖ ПАУЗА": "‖ PAUSE",
+    "+ КЛЮЧ": "+ KEY", "УДАЛИТЬ КЛЮЧ": "DELETE KEY", "Название анимации": "Animation name",
+    "Сначала создайте анимацию": "Create an animation first", "Ключ удалён": "Key deleted",
+    "Нельзя удалить первый ключ и единственный оставшийся": "Cannot delete the first key or the only one left",
+    "ПРЕДПРОСМОТР": "PREVIEW", "Первый ключ всегда стоит в начале анимации":
+        "The first key always sits at the start of the animation",
+    "В этой точке времени уже есть ключ": "There is already a key at this time",
+    "Анимаций уже максимум": "Animation limit reached", "Ключей уже максимум": "Key limit reached",
+    "Ключ": "Key", "СПИСОК АНИМАЦИЙ": "ANIMATION LIST", "Анимаций пока нет": "No animations yet",
+    "Создайте анимацию слева": "Create an animation on the left", "КЛЮЧ": "KEY", "Время": "Time",
+    "Удалить анимацию": "Delete animation",
+    "ПРОПУЩЕНО": "SKIPPED", "В РЕДАКТОР": "TO EDITOR",
+    "P / ESC — продолжить, R — заново, M — в редактор": "P / ESC — resume, R — restart, M — to editor",
+    "ТЕСТ ОКОНЧЕН": "TEST FINISHED", "Оценка": "Grade", "Счёт": "Score",
+    "Ничего не записано: рекорды, история и призрак не изменены.":
+        "Nothing saved: records, history and ghost are unchanged.",
+    "тест с курсора (ничего не записывается)": "test from cursor (nothing is saved)",
+    "Тест с курсора (без записи)": "Test from cursor (no save)",
+    "Слишком близко к концу песни: отодвиньте курсор": "Too close to the end of the song: move the cursor back",
+    "+ КАМЕРА": "+ CAMERA", "+ ПЕРЕХОД": "+ TRANSITION", "+ ПАКЕТ": "+ PACK",
+    "Кривая движения": "Motion curve", "Вид перехода": "Transition type", "Режим": "Mode",
+    "Пропуск клавишей Enter": "Skip with Enter", "Пакет": "Pack",
+    "Пакет не выбран: нажмите B": "No pack selected: press B",
+    "Выберите событие «ПАКЕТ»": "Select a PACK event",
+    "Пакетов нет: положите .json в папку packs/ и нажмите R в списке пакетов":
+        "No packs: put .json files into packs/ and press R in the pack list",
+    "Перечитано": "Reloaded", "ПАКЕТЫ": "PACKS",
+    "↑↓ — выбор · Enter — выбрать · R — перечитать папку · Esc — отмена":
+        "↑↓ select · Enter choose · R reload folder · Esc cancel",
+    "Пакетов нет. Положите .json в папку packs/ и нажмите R": "No packs. Put .json files into packs/ and press R",
+    "ВЫБРАТЬ": "CHOOSE",
+    "Цвет (0 чёрный … 3 голубой)": "Colour (0 black … 3 cyan)",
+    "Дорожка (0 — экран, 1=D … 4=K)": "Lane (0 screen, 1=D … 4=K)",
+    "Сила пакета, %": "Pack power, %", "Цвет пакета (0–5)": "Pack colour (0–5)",
+    "Сдвиг X, px": "Offset X, px", "Сдвиг Y, px": "Offset Y, px",
+    "КАМЕРА": "CAMERA", "ПЕРЕХОД": "TRANSITION", "ПАКЕТ": "PACK",
+    "ЧЕРНЫЙ": "BLACK", "БЕЛЫЙ": "WHITE", "КРАСНЫЙ": "RED", "ГОЛУБОЙ": "CYAN",
+    "ЗАТЕМНЕНИЕ": "FADE", "ДИАФРАГМА": "IRIS", "ШТОРКА": "WIPE",
+    "ЗАКРЫТЬ": "CLOSE", "ОТКРЫТЬ": "OPEN", "АКЦЕНТ": "PULSE",
+    "За сколько мс камера переходит к новому положению. Новое событие камеры обрывает предыдущее и начинается с текущего положения":
+        "Milliseconds the camera takes to reach the new position. A new camera event cuts the previous one and starts from the current position",
+    "Масштаб кадра: 100% — без изменений, больше — приближение, меньше — отдаление с чёрными полями":
+        "Frame zoom: 100% is unchanged, more zooms in, less zooms out with black borders",
+    "Сдвиг кадра по горизонтали, пиксели": "Frame shift horizontally, pixels",
+    "Сдвиг кадра по вертикали, пиксели": "Frame shift vertically, pixels",
+    "Кривая движения: РАЗГОН — медленный старт, ТОРМОЖЕНИЕ — медленное окончание, МЯГКО — по обоим краям":
+        "Motion curve: EASE IN is a slow start, EASE OUT a slow end, SMOOTH is slow at both ends",
+    "ЗАТЕМНЕНИЕ — плавная заливка, ДИАФРАГМА — круг из центра, ШТОРКА — полоса слева направо":
+        "FADE is a smooth fill, IRIS a circle from the centre, WIPE a bar from left to right",
+    "ЗАКРЫТЬ — экран закрыт и остаётся закрытым, ОТКРЫТЬ — экран открывается, АКЦЕНТ — закрывается и открывается":
+        "CLOSE keeps the screen closed, OPEN opens it, PULSE closes and opens it",
+    "Сколько мс длится переход": "How long the transition lasts, ms",
+    "Кривая перехода: как быстро закрывается или открывается экран": "Transition curve: how fast the screen closes or opens",
+    "Цвет закрытого экрана: 0 — чёрный, 1 — белый, 2 — красный, 3 — голубой":
+        "Colour of the covered screen: 0 black, 1 white, 2 red, 3 cyan",
+    "ДА — Enter пропускает переход «ОТКРЫТЬ» и «АКЦЕНТ». Счёт не меняется":
+        "YES: Enter skips the OPEN and PULSE transitions. The score is not changed",
+    "Пакет из библиотеки packs/. Стрелки перебирают пакеты, B — открыть список с предпросмотром":
+        "Pack from the packs/ library. Arrows cycle packs, B opens the list with a preview",
+    "Сколько мс пакет живёт на экране": "How long the pack stays on screen, ms",
+    "Дорожка, от которой идёт пакет: 0 — центр экрана, 1 — D … 4 — K":
+        "Lane the pack starts from: 0 screen centre, 1 D … 4 K",
+    "Смещение точки появления по горизонтали, пиксели": "Horizontal offset of the start point, pixels",
+    "Смещение точки появления по вертикали, пиксели": "Vertical offset of the start point, pixels",
+    "Сила пакета: число частиц и размер колец, в пределах лимитов":
+        "Pack power: particle count and ring size, within limits",
+    "Цвет пакета из палитры: 0 — белый, 1 — красный, 2 — голубой и так далее до 5":
+        "Pack colour from the palette: 0 white, 1 red, 2 cyan, up to 5",
+    "Плавно меняет масштаб кадра и сдвигает его за «плавность». Новое событие камеры обрывает предыдущее и начинается с текущего положения.":
+        "Smoothly changes the frame zoom and shifts it over the smoothness time. A new camera event cuts the previous one and starts from the current position.",
+    "Затемнение, диафрагма или шторка за «длительность». «Закрыть» держит экран закрытым до следующего перехода, «открыть» показывает игру, «акцент» закрывает и открывает. Enter пропускает переходы «открыть» и «акцент».":
+        "Fade, iris or wipe over the duration. CLOSE keeps the screen covered until the next transition, OPEN shows the game, PULSE closes and opens. Enter skips the OPEN and PULSE transitions.",
+    "Визуальный пакет из библиотеки (кольца, частицы, вспышки). Пакет выбирается полем «Пакет» или клавишей B; параметры пакета — отдельными строками.":
+        "Visual pack from the library: rings, particles, flashes. Pick a pack with the Pack field or B; pack parameters are separate rows.",
 }

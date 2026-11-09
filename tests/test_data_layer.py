@@ -30,7 +30,7 @@ def test_corrupt_json_does_not_raise_and_is_quarantined(tmp_path, text):
     p = tmp_path / "bad.json"
     p.write_text(text, encoding="utf-8")
     assert jsonio.load(str(p), {"d": 1}) == {"d": 1}
-    assert not p.exists()                                   # перенесён в карантин, а не затёрт
+    assert not p.exists()
     kept = [n for n in os.listdir(tmp_path) if ".corrupt-" in n]
     assert len(kept) == 1
     assert (tmp_path / kept[0]).read_text(encoding="utf-8") == text
@@ -184,14 +184,14 @@ def test_records_validation():
 
 #-- chart + songs
 
-def test_chart_roundtrip_v5(data_root):
+def test_chart_roundtrip_v6(data_root):
     ch = chartmod.Chart.from_dict(sample())
     ch.song = "a.ogg"
     path = songs.save_chart(ch)
     again, rep = songs.load_chart_file(path)
     assert again.id == ch.id and again.id and again.key == os.path.basename(path)
     assert [n.key() for n in again.notes] == [n.key() for n in ch.notes]
-    assert json.load(open(path, encoding="utf-8"))["version"] == 5
+    assert json.load(open(path, encoding="utf-8"))["version"] == V.CHART_VERSION == 8
 
 
 def test_save_keeps_backup_of_previous_version(data_root):
@@ -212,7 +212,7 @@ def test_corrupt_chart_file_is_listed_as_error_not_crash(data_root):
     ch, rep = songs.load_chart_file(p)
     assert ch is None and rep.has_code("json.syntax")
     assert songs.charts_for("a.ogg") == []
-    assert os.path.exists(p)                                   # исходный файл не тронут и не удалён
+    assert os.path.exists(p)
 
 
 def test_chart_cache_invalidates_on_change(data_root):
@@ -239,5 +239,5 @@ def test_ranks_roundtrip_and_corrupt_ranks_file(data_root):
     assert songs.chart_best(ch)["grade"] == "A"
     open(songs.RANKS_PATH, "w").write("{broken")
     songs._json_cache.clear()
-    assert songs.chart_best(ch) is None                        # не падаем
+    assert songs.chart_best(ch) is None
     assert any(".corrupt-" in n for n in os.listdir(os.path.dirname(songs.RANKS_PATH)))

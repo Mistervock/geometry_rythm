@@ -20,7 +20,7 @@ from i18n import t
 
 PATH = C.root("data", "progress.json")
 VERSION = 1
-MIN_NOTES = 30                 # короче — слишком легко получить «без промахов»
+MIN_NOTES = 30
 MIN_EDIT_NOTES = 10
 MAX_COUNTER = 10 ** 9
 
@@ -207,7 +207,7 @@ def _practice_finished(st, d):
     s = out["stats"]
     a, b = out["section"]
     if s["judged"] < 10 or (b - a) < 5000:
-        return                                       # слишком короткий отрезок практикой не считается
+        return
     st["practice_runs"] += 1
     st["practice_seconds"] = min(MAX_COUNTER, st["practice_seconds"] + int((b - a) / 1000 / max(0.25, out.get("speed", 1.0))))
     if out.get("speed", 1.0) <= 0.75 and s["acc"] >= 90:

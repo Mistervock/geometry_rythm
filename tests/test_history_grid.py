@@ -30,7 +30,7 @@ def test_undo_redo_add_remove():
     base = keys(ch)
     a = Note(50, 2)
     h.execute(H.AddNotes([a]))
-    assert len(ch.notes) == 4 and ch.notes[1] is a                # вставлена по порядку
+    assert len(ch.notes) == 4 and ch.notes[1] is a
     h.execute(H.RemoveNotes([ch.notes[0]]))
     assert len(ch.notes) == 3
     h.undo()
@@ -57,11 +57,11 @@ def test_modify_notes_and_coalescing():
     h = H.EditHistory(ch, clock=clk)
     n = ch.notes[1]
     old = n.key()
-    for dt in (10, 20, 30):                                      # перетаскивание: много мелких правок
+    for dt in (10, 20, 30):
         clk.t += 0.05
         cur = n.key()
         h.execute(H.ModifyNotes([(n, cur, (cur[0] + dt, cur[1], cur[2]))], coalesce=("drag", id(n))))
-    assert len(h.undo_stack) == 1                                 # одна запись истории
+    assert len(h.undo_stack) == 1
     assert n.t == old[0] + 60
     h.undo()
     assert n.key() == old
@@ -75,7 +75,7 @@ def test_coalesce_not_across_time_or_after_save():
     h.execute(H.ModifyNotes([(n, n.key(), (5, 0, 0))], coalesce="k"))
     h.mark_saved()
     h.execute(H.ModifyNotes([(n, n.key(), (9, 0, 0))], coalesce="k"))
-    assert len(h.undo_stack) == 2                                 # в сохранённую запись не вливаемся
+    assert len(h.undo_stack) == 2
     assert h.dirty
     clk.t += 5
     h.execute(H.ModifyNotes([(n, n.key(), (11, 0, 0))], coalesce="k"))
@@ -204,7 +204,7 @@ def test_snap_on_off_and_free_placement():
     g = B.BeatGrid({"mode": "beat", "bpm": 120, "div": 4, "offset": 0, "snap": True})
     assert g.step_ms == 125.0
     assert g.place(130) == 125 and g.place(190) == 250
-    assert g.place(130, free=True) == 130                        # модификатор отключает привязку на операцию
+    assert g.place(130, free=True) == 130
     g.snap_on = False
     assert g.place(131) == 131 and g.place(0.4) == 0 and g.place(-7) == 0
 
@@ -226,7 +226,7 @@ def test_no_float_drift_on_long_tracks():
         t = hours * 3600 * 1000
         i = g.index_near(t)
         assert abs(g.time_at(i) - t) <= g.step_ms / 2 + 1e-6
-        assert g.snap(g.snap(t)) == g.snap(t)                    # идемпотентность
+        assert g.snap(g.snap(t)) == g.snap(t)
 
 
 def test_lines_kinds_and_limit():
@@ -234,7 +234,7 @@ def test_lines_kinds_and_limit():
     lines = g.lines(0, 4000)
     kinds = [k for _, k in lines]
     assert kinds.count(B.BAR) == 3 and kinds.count(B.BEAT) >= 6 and kinds.count(B.SUB) >= 6
-    assert g.lines(0, 10 ** 8) == []                             # слишком плотно — не рисуем ничего лишнего
+    assert g.lines(0, 10 ** 8) == []
     g.show_bars = False
     assert B.BAR not in [k for _, k in g.lines(0, 4000)]
 
@@ -260,7 +260,7 @@ def test_note_index_window_and_nearest():
     notes = [Note(100, 0, 5000), Note(200, 1), Note(300, 2), Note(10_000, 0)]
     idx = NoteIndex(notes)
     got = [n.t for n in idx.visible(4000, 4500)]
-    assert got == [100]                                          # длинное удержание видно, пока не кончилось
+    assert got == [100]
     assert [n.t for n in idx.visible(0, 250)] == [100, 200]
     assert idx.nearest(290, limit=50).t == 300 and idx.nearest(1000, limit=50) is None
     assert idx.nearest(150, lane=2, limit=500).t == 300

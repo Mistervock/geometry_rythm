@@ -14,6 +14,7 @@ import time
 import pygame
 
 import audio
+import cine as CN
 import config as C
 import display
 import events as EV
@@ -25,6 +26,7 @@ import validation as V
 import screen_setting as SS
 from i18n import t
 from noteindex import NoteIndex
+import modifiers as MD
 
 
 class PrepError(Exception):
@@ -37,22 +39,26 @@ class PrepError(Exception):
 class Session:
     def __init__(self, chart):
         self.chart = chart
-        self.practice = None            # PracticeConfig или None
+        self.practice = None
         self.speed = 1.0
         self.notes = []
         self.index = None
-        self.events = []                # события для игры (без bg и heal), отсортированы по времени
+        self.events = []
         self.bg_events = []
         self.heals = []
         self.duration = 0
         self.energy = []
         self.energy_fps = 21.5
         self.song_file = ""
-        self.play_file = ""             # файл, который реально проигрывается (замедленный в практике)
+        self.play_file = ""
         self.warnings = []
-        self.timings = {}               # шаг → мс
+        self.timings = {}
         self.ghost = None
         self.scroll = float(settings.get("scroll_ms"))
+        self.mods = []
+        self.test = False
+        self.cine = None
+        self.pack_events = []
 
     @property
     def total_ms(self):
@@ -75,8 +81,10 @@ STEP_LABELS = (
 class Preparer:
     """Выполняет шаги подготовки по одному — экран между шагами успевает перерисоваться."""
 
-    def __init__(self, chart, practice=None, ghost=None, notes=()):
+    def __init__(self, chart, practice=None, ghost=None, notes=(), mods=(), test=False):
         self.session = Session(chart)
+        self.session.mods = MD.normalize(mods)
+        self.session.test = bool(test)
         self.session.warnings.extend(notes)
         self.session.practice = practice
         self.session.speed = practice.speed if practice else 1.0
@@ -135,14 +143,22 @@ class Preparer:
 
     def _build(self, s):
         ch = s.chart
+        s.scroll = MD.scroll_for(settings.get("scroll_ms"), s.mods)
+        mirror = MD.has(s.mods, "mirror")
         s.notes = ch.copy_notes()
+        if mirror:
+            for n in s.notes:
+                n.lane = MD.mirror_lane(n.lane)
         s.notes.sort(key=lambda n: (n.t, n.lane))
         for i, n in enumerate(s.notes):
             n.idx = i
         s.index = NoteIndex(s.notes)
         s.bg_events = sorted((e for e in ch.events if e["type"] == "bg"), key=lambda e: e["t"])
         s.events = sorted((e for e in ch.events if e["type"] not in ("bg", "heal")), key=lambda e: e["t"])
-        s.heals = sorted(({"t": e["t"], "lane": e["lane"] - 1, "fall": s.scroll * 100.0 / e["speed"]}
+        s.cine = CN.build(s.events)
+        s.pack_events = [(i, ev) for i, ev in enumerate(s.events) if ev["type"] == "pack"]
+        s.heals = sorted(({"t": e["t"], "lane": MD.mirror_lane(e["lane"] - 1) if mirror else e["lane"] - 1,
+                           "fall": s.scroll * 100.0 / e["speed"]}
                           for e in ch.events if e["type"] == "heal"), key=lambda h: h["t"])
         if s.practice is not None:
             s.practice.fit(s.duration)
@@ -152,7 +168,7 @@ class Preparer:
         for ev in s.events:
             kind, name = ev["type"], ev.get("file")
             if kind in ("image", "video"):
-                if not name or not os.path.isfile(os.path.join(EV.IMAGE_DIR, name)):
+                if not name or EV.image_path(name) is None:
                     s.warnings.append(f"{t('Нет файла события')}: {name or '—'} ({t('событие пропущено')})")
                     continue
                 if kind == "video" and not EV.video.AVAILABLE:
@@ -169,7 +185,6 @@ class Preparer:
                 EV.natural_size(ev)
 
     def _audio(self, s):
-        # Все скорости (и 1x) играют из одного полного декодирования: единая временная шкала звука
         path = stretch.playable(s.song_file, s.speed)
         if path is None:
             raise PrepError(t("Замедление недоступно"), [t("Установите numpy (pip install numpy).")])
@@ -182,16 +197,16 @@ class Preparer:
             raise PrepError(t("Не удалось загрузить песню"), [os.path.basename(s.play_file)])
 
 
-def prepare(chart, practice=None, ghost=None, notes=()):
+def prepare(chart, practice=None, ghost=None, notes=(), mods=(), test=False):
     """Без экрана (для тестов и скриптов)."""
-    return Preparer(chart, practice, ghost, notes).run_all()
+    return Preparer(chart, practice, ghost, notes, mods, test).run_all()
 
 
 #-- Экран подготовки
 
-def prep_screen(clock, chart, practice=None, ghost=None, notes=()):
+def prep_screen(clock, chart, practice=None, ghost=None, notes=(), mods=(), test=False):
     """Показывает ход подготовки. Возвращает Session или None (ошибка / отмена)."""
-    prep = Preparer(chart, practice, ghost, notes)
+    prep = Preparer(chart, practice, ghost, notes, mods, test)
     frame = 0
     error = None
     shown_warn_until = None

@@ -18,8 +18,8 @@ import copy
 import time
 
 MAX_COMMANDS = 300
-MAX_COST = 600_000           # сумма cost() всех записей: защита от разрастания памяти
-COALESCE_WINDOW = 0.8        # секунд между однотипными правками, чтобы слить их в одну
+MAX_COST = 600_000
+COALESCE_WINDOW = 0.8
 
 
 class Command:
@@ -153,20 +153,24 @@ class ReplaceNotes(Command):
 
 
 class SetEvents(Command):
-    """Снимок событий и папок до/после правок (экран событий). Событий немного, снимок дёшев."""
+    """Снимок событий, папок и анимаций до/после правок (экран событий и редактор анимаций).
+
+    Старые снимки из двух элементов (события, папки) тоже принимаются: анимации в них не менялись."""
     label = "Изменить события"
 
     def __init__(self, before, after):
-        self.before = copy.deepcopy(before)       # (events, folders)
+        self.before = copy.deepcopy(before)
         self.after = copy.deepcopy(after)
 
     @staticmethod
     def snapshot(chart):
-        return (copy.deepcopy(chart.events), copy.deepcopy(chart.folders))
+        return (copy.deepcopy(chart.events), copy.deepcopy(chart.folders), copy.deepcopy(chart.animations))
 
     def _apply(self, chart, snap):
         chart.events = copy.deepcopy(snap[0])
         chart.folders = copy.deepcopy(snap[1])
+        if len(snap) > 2:
+            chart.animations = copy.deepcopy(snap[2])
 
     def do(self, chart):
         self._apply(chart, self.after)
@@ -242,9 +246,9 @@ class EditHistory:
         self.clock = clock
         self.undo_stack = []
         self.redo_stack = []
-        self.rev = 0                   # растёт при любом изменении содержимого (в том числе Undo/Redo)
-        self.saved_token = None        # запись на вершине стека в момент сохранения
-        self.force_dirty = False       # чарт новый/восстановлен: «не сохранён», пока не сохранят
+        self.rev = 0
+        self.saved_token = None
+        self.force_dirty = False
         self.listeners = []
         self._group = None
         self._last_time = 0.0

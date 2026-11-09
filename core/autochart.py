@@ -23,7 +23,6 @@ MIN_LANE_GAP_MS = 120
 MAX_PER_SEC = 3.0
 SKIP_START_S = 1.2
 SKIP_END_S = 1.5
-# Плотность авторазметки: порог силы пика, минимум между нотами (с), потолок нот в секунду, минимум на дорожке (мс)
 PRESETS = {
     "easy": {"z": 3.4, "gap": 0.30, "per_sec": 2.0, "lane_gap": 220},
     "normal": {"z": Z_THRESH, "gap": MIN_GAP_S, "per_sec": MAX_PER_SEC, "lane_gap": MIN_LANE_GAP_MS},

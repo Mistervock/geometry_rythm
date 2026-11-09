@@ -42,9 +42,12 @@ You retain rights to your own original contributions to a mod, but that does not
 
 ## 5. Third-party music and assets
 
-The project credits **“YARARARA (ヤラララ)” by AnythingBecomeMoe, featuring Kasane Teto SV2**: https://www.youtube.com/watch?v=T24rF_x0TmQ.
+The project credits:
 
-Attribution is not a substitute for permission. The song, music recording, video, characters, artwork, and other third-party material remain subject to the rights and terms of their respective owners. This document grants no rights to those materials.
+- **“YARARARA (ヤラララ)”** — written, composed, and arranged by AnythingBecomeMoe; vocals by Kasane Teto SV2: https://www.youtube.com/watch?v=T24rF_x0TmQ.
+- **“Jukai”** (also labelled “Jukai - An Arbiter Core Suppresion” in the provided MP3 metadata) — composed by **Christopher Baklid** and associated with the *Lobotomy Corporation* soundtrack by **Project Moon**. Creator's SoundCloud track: https://soundcloud.com/christopherbaklid/jukai.
+
+These are third-party works. They were not created by, and are not owned by, the Geometry Rhythm author. Attribution is not a substitute for permission. The songs and recordings remain subject to the rights and terms of their respective rights holders. This document grants no rights to redistribute the music or any other third-party assets.
 
 ## 6. Termination and questions
 

@@ -11,6 +11,8 @@ import display
 import editor
 import keymap
 import library
+import ghost_ui
+import modifiers_ui
 import startup
 import settings
 import screen_setting as SS
@@ -27,7 +29,6 @@ PREVIEW_DELAY = 0.35
 SEARCH_MAX = 30
 BLACK = (0, 0, 0)
 
-# Сортировки списка песен: ключ, подпись
 SORTS = (
     ("author", "Автор (группы)"),
     ("title", "Название А–Я"),
@@ -173,13 +174,15 @@ def _songs_loop(clock):
     back_btn = S.Btn((C.WIDTH // 2 - SS.U(70), SS.U(528), SS.U(140), SS.U(40)), t("НАЗАД"), C.PURPLE_LIGHT, S.font(16, True))
     random_btn = S.Btn((C.WIDTH // 2 + SS.U(90), SS.U(528), SS.U(200), SS.U(40)), t("СЛУЧАЙНАЯ"), C.GOLD, S.font(16, True))
     chart_specs = (
-        ("play", t("ИГРАТЬ"), C.GREEN, 140),
-        ("practice", t("ПРАКТИКА"), C.GOLD, 150),
-        ("fav", t("★ ИЗБР."), C.GOLD, 120),
-        ("edit", t("РЕДАКТ."), C.CYAN, 140),
-        ("new", t("НОВЫЙ"), C.GOLD, 130),
-        ("del", t("УДАЛИТЬ"), C.RED_LIGHT, 140),
-        ("back", t("НАЗАД"), C.PURPLE_LIGHT, 120),
+        ("play", t("ИГРАТЬ"), C.GREEN, 120),
+        ("practice", t("ПРАКТИКА"), C.GOLD, 130),
+        ("mods", t("МОДИФ."), C.CYAN, 110),
+        ("ghost", t("ПРИЗРАК"), C.CYAN, 110),
+        ("fav", t("★ ИЗБР."), C.GOLD, 110),
+        ("edit", t("РЕДАКТ."), C.CYAN, 120),
+        ("new", t("НОВЫЙ"), C.GOLD, 120),
+        ("del", t("УДАЛИТЬ"), C.RED_LIGHT, 120),
+        ("back", t("НАЗАД"), C.PURPLE_LIGHT, 110),
     )
     chart_btns = []
     x = (C.WIDTH - (sum(SS.U(w) for *_, w in chart_specs) + SS.U(14) * (len(chart_specs) - 1))) // 2
@@ -235,6 +238,14 @@ def _songs_loop(clock):
             return ("play", charts[sel_chart], "play")
         if action == "practice" and charts:
             return ("play", charts[sel_chart], "practice")
+        if action == "mods" and charts:
+            if modifiers_ui.panel(clock, charts[sel_chart]) is not None:
+                toast, toast_left = t("Модификаторы сохранены для этого чарта"), 2.0
+            return None
+        if action == "ghost" and charts:
+            if ghost_ui.panel(clock, charts[sel_chart]) is not None:
+                toast, toast_left = t("Призрак для этого чарта выбран"), 2.0
+            return None
         if action == "fav" and charts:
             on = lib.toggle_favorite_chart(charts[sel_chart])
             load_charts()
@@ -573,7 +584,7 @@ def _draw_list(entries, stats, colors, sel, top, bg, back_btn, random_btn, mouse
         row = pygame.Rect(SS.U(130), y, C.WIDTH - SS.U(260), SS.U(ROW_SONGS - 6))
         if kind == "head":
             author_col = C.GOLD
-            if colors.get(val):                                 # фон автора тёмный: подпись берём светлее
+            if colors.get(val):
                 author_col = tuple(min(255, 150 + c * 2) for c in colors[val])
             label = val.upper() if val else t("БЕЗ АВТОРА")
             scr.blit(S.font(15, True).render(label, True, author_col), (row.x + SS.U(14), row.y + SS.U(12)))

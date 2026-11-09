@@ -92,6 +92,51 @@ def confirm(clock, message, title=None, yes=None, no=None):
         _end_frame(scr, frame)
 
 
+def leave_game(clock):
+    """Окно «Покинуть игру?» с выбором ПОКИНУТЬ / ОСТАТЬСЯ. Возвращает True, если игрок решил выйти.
+
+    По умолчанию выбрано ОСТАТЬСЯ, Esc тоже оставляет игрока в игре. Стрелки и Tab переключают кнопку, Enter нажимает
+    выбранную, мышь нажимает кнопку под курсором."""
+    snap = _snapshot()
+    box = pygame.Rect(0, 0, SS.U(BOX_W), SS.U(230))
+    box.center = (C.WIDTH // 2, C.HEIGHT // 2)
+    bw, gap = SS.U(200), SS.U(24)
+    x0 = box.centerx - (2 * bw + gap) // 2
+    y = box.bottom - SS.U(62)
+    leave_btn = S.Btn((x0, y, bw, SS.U(42)), t("ПОКИНУТЬ"), C.RED_LIGHT, S.font(16, True))
+    stay_btn = S.Btn((x0 + bw + gap, y, bw, SS.U(42)), t("ОСТАТЬСЯ"), C.CYAN, S.font(16, True))
+    buttons = (leave_btn, stay_btn)
+    sel, frame = 1, 0
+    while True:
+        display.tick(clock)
+        frame += 1
+        mouse = pygame.mouse.get_pos()
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if ev.type == pygame.KEYDOWN:
+                if ev.key == pygame.K_ESCAPE:
+                    return False
+                if ev.key in (pygame.K_LEFT, pygame.K_a):
+                    sel = 0
+                elif ev.key in (pygame.K_RIGHT, pygame.K_d, pygame.K_TAB):
+                    sel = 1
+                elif ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                    return sel == 0
+            elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                if leave_btn.hovered(ev.pos):
+                    return True
+                if stay_btn.hovered(ev.pos):
+                    return False
+        scr = _begin_frame(snap, frame, box, C.RED_LIGHT)
+        S.glitch_title(scr, S.font(26, True), t("ПОКИНУТЬ ИГРУ?"), C.RED_LIGHT, box.centerx, box.y + SS.U(34), frame)
+        S.blit_text(scr, S.font(12), t("ENTER — выбрать, ESC — остаться"), C.GREY, box.centerx, box.y + SS.U(112))
+        for i, btn in enumerate(buttons):
+            btn.draw(scr, mouse, active=(i == sel))
+        _end_frame(scr, frame)
+
+
 def ask_text(clock, title, initial="", maxlen=24):
     """Окно ввода строки. Возвращает текст или None при отмене."""
     snap = _snapshot()

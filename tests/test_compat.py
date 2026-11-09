@@ -22,7 +22,6 @@ def test_shipped_chart_loads_without_loss_and_roundtrips(tmp_path):
     assert [(n["t"], n["lane"], n.get("d", 0)) for n in raw["notes"]] == [n.key()[:2] + (n.dur,) for n in ch.notes] \
         or sorted((n["t"], n["lane"], n.get("d", 0)) for n in raw["notes"]) == sorted(n.key() for n in ch.notes)
     assert len(ch.events) == len(raw["events"]) and ch.charter == "Mistervock" and ch.difficulty == 3
-    # сохранение в новом формате и повторная загрузка дают то же содержимое
     out = tmp_path / "c.json"
     ch.path = str(out)
     jsonio.write_atomic(str(out), ch.to_dict())
@@ -57,7 +56,7 @@ def test_shipped_settings_accepted(tmp_path, monkeypatch):
     assert settings.get("scroll_ms") == 900 and settings.get("lane_keys") == ["d", "f", "j", "k"]
     assert settings.get("ghost") in (0, 1) and settings.get("autosave") in (0, 1)
     settings.set("preview", 0)
-    assert json.load(open(copy))["scroll_ms"] == 900            # неизвестные/старые поля сохранены при записи
+    assert json.load(open(copy))["scroll_ms"] == 900
     monkeypatch.setattr(settings, "_data", None)
 
 
@@ -73,4 +72,4 @@ def test_old_records_wins_ranks_and_unlocked_files(data_root):
     json.dump(["Old Achievement.vcld"], open(achievements.UNLOCKED_PATH, "w"))
     assert achievements.is_unlocked("Old Achievement.vcld")
     assert achievements.unlock("gr:first_clear") is True
-    assert achievements.is_unlocked("Old Achievement.vcld")        # прежний прогресс на месте
+    assert achievements.is_unlocked("Old Achievement.vcld")

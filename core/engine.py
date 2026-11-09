@@ -55,7 +55,7 @@ class Engine:
         self.duration = int(duration)
         self.max_hp = max_hp
         self.practice = practice
-        self.hp_loss = hp_loss          # только для практики: терять ли HP (но проиграть там нельзя)
+        self.hp_loss = hp_loss
         self.sink = sink
         self.sect_a, self.sect_b = (None, None) if section is None else (int(section[0]), int(section[1]))
         self.attempt = 0
@@ -92,7 +92,7 @@ class Engine:
         self.holds_ok = 0
         self.holds_broken = 0
         self.judgments = []
-        self.timeline = []              # (время, очки, комбо) после каждого решения — для Ghost
+        self.timeline = []
         self._by_note = {}
         self.inputs = []
         self.now = 0.0
@@ -208,7 +208,6 @@ class Engine:
             if not n.held:
                 self._hold_break(n)
                 continue
-            # тики по расписанию от момента попадания: результат не зависит от частоты кадров
             limit = min(now, n.end)
             while n.next_tick <= limit and n.next_tick < n.end:
                 self.score += HOLD_TICK_POINTS * self._mult()
@@ -283,7 +282,7 @@ class Engine:
         if not self.practice or self.hp_loss:
             self.hp -= 1
             if self.practice:
-                self.hp = max(1, self.hp)           # в практике проиграть нельзя
+                self.hp = max(1, self.hp)
         self._snap()
         self._emit("miss", note=n)
         if self.hp <= 0 and not self.practice:

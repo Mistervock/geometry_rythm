@@ -23,7 +23,7 @@ VERSION = 1
 HISTORY_LIMIT = 200
 FP_BYTES = 65536
 
-_fp_cache = {}                     # (путь, размер, mtime) → id
+_fp_cache = {}
 
 
 def song_id(song):

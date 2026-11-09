@@ -1,0 +1,15 @@
+{
+  "format": "geometry-rhythm-pack",
+  "api": 1,
+  "id": "fade_puff",
+  "name": "Появление и исчезновение",
+  "description": "Кольцо проявляется, затем облачко частиц уплывает вверх и гаснет. Для появления и ухода объектов.",
+  "dur": 1400,
+  "params": [
+    {"id": "size", "name": "Радиус, px", "min": 30, "max": 180, "step": 10, "default": 90}
+  ],
+  "layers": [
+    {"kind": "ring", "start": 0, "end": 0.4, "radius": [0, "$size"], "width": 4, "alpha": [0, 255], "colour": "$colour"},
+    {"kind": "particles", "start": 0.4, "end": 1, "count": 14, "speed": [30, 90], "size": [3, 6], "gravity": -120, "spread": 360, "alpha": [255, 0], "colour": "$colour"}
+  ]
+}

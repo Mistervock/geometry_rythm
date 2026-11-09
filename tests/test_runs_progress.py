@@ -45,13 +45,11 @@ def test_first_run_saves_ghost_rank_and_win(env):
     assert songs.is_won(ch)
     g, status = GH.load(ch)
     assert status == GH.OK and g.score == out["score"]
-    # второй проход хуже — призрак остаётся прежним, сравнение с рекордом показывает «хуже»
     worse = fake_outcome(ch)
     worse["score"] -= 100
     worse["stats"]["score"] -= 100
     out2 = runs.finish_run(ch, worse, ghost_old=g)
     assert out2["ghost_saved"] == "kept" and out2["pb_compare"]["better"] is False
-    # точно такой же результат: ничья оставляет старый
     same = fake_outcome(ch)
     assert runs.finish_run(ch, same, ghost_old=g)["ghost_saved"] == "kept"
     better = fake_outcome(ch)
@@ -66,7 +64,7 @@ def test_ghost_stale_corrupt_and_newer(env):
     runs.finish_run(ch, fake_outcome(ch))
     path = GH.path_for(ch.id or ch.key)
     assert os.path.exists(path) or any(os.path.exists(GH.path_for(k)) for k in GH.keys_for(ch))
-    ch.notes.append(chartmod.Note(99000, 0, 0))                # чарт изменился → призрак устарел
+    ch.notes.append(chartmod.Note(99000, 0, 0))
     assert GH.load(ch)[1] == GH.STALE
     ch.notes.pop()
     p = next(GH.path_for(k) for k in GH.keys_for(ch) if os.path.exists(GH.path_for(k)))
@@ -115,17 +113,15 @@ def test_practice_does_not_touch_records_ranks_wins_or_achievements(env):
 
 def test_builtin_achievements_honest_and_not_repeated(env, tmp_path):
     ch = mkchart()
-    # старый прогресс сохраняется
     achievements.unlock("old_one.vcld")
     out = runs.finish_run(ch, fake_outcome(ch))
     st = progress.load()
     assert st["finishes"] == 1 and st["best_streak"] == 1
     names1 = out["unlocked"]
     assert progress.is_unlocked("first_clear") and "old_one.vcld" in achievements.unlocked_names()
-    assert names1                                           # что-то получено при первом финише
+    assert names1
     out2 = runs.finish_run(ch, fake_outcome(ch))
-    assert not [n for n in out2["unlocked"] if n in names1]  # повторно не выдаётся
-    # проигрыш сбрасывает серию, но не отнимает полученное
+    assert not [n for n in out2["unlocked"] if n in names1]
     failed = fake_outcome(ch)
     failed["failed"] = True
     runs.finish_run(ch, failed)
@@ -142,7 +138,7 @@ def test_short_charts_do_not_give_no_miss(env):
 def test_practice_achievements_need_real_section(env):
     ch = mkchart()
     out = fake_outcome(ch, practice=True)
-    out["section"] = (0, 2000)                              # слишком короткий участок
+    out["section"] = (0, 2000)
     runs.finish_run(ch, out)
     assert progress.load()["practice_runs"] == 0
     out = fake_outcome(ch, practice=True)
@@ -156,7 +152,7 @@ def test_editor_achievement_counters(env):
     ch = mkchart()
     ch.id = "abc123"
     progress.notify("chart_saved", chart=ch, snapped_notes=25, new=True)
-    progress.notify("chart_saved", chart=ch, snapped_notes=25, new=True)   # тот же чарт — не «второй новый»
+    progress.notify("chart_saved", chart=ch, snapped_notes=25, new=True)
     st = progress.load()
     assert st["charts_created"] == 1 and st["grid_saves"] == 2
     assert progress.is_unlocked("create_1") and progress.is_unlocked("editor_grid")
@@ -208,7 +204,7 @@ def test_library_chart_favorite_by_id(env):
     lib = library.get()
     lib.toggle_favorite_chart(ch)
     ch.path = os.path.join(os.path.dirname(ch.path), "renamed.json")
-    assert lib.is_favorite_chart(ch)                           # id пережил переименование файла
+    assert lib.is_favorite_chart(ch)
 
 
 def test_startup_recovery_actions(env, tmp_path, monkeypatch):
@@ -222,16 +218,13 @@ def test_startup_recovery_actions(env, tmp_path, monkeypatch):
     monkeypatch.setattr(AS, "default_dir", lambda: d)
     calls = []
     monkeypatch.setattr(startup, "_open_editor", lambda clock, chart, rec=None: calls.append((chart, rec)))
-    # восстановить
     monkeypatch.setattr(startup, "ask", lambda clock, rec: "restore")
     assert startup.handle(None, recs[0]) == "restored"
     assert len(calls[0][0].notes) == len(ch.notes) and calls[0][1] is recs[0]
-    # открыть обычный: исходник без новой ноты, автосохранение остаётся, но больше не напоминает
     monkeypatch.setattr(startup, "ask", lambda clock, rec: "normal")
     assert startup.handle(None, recs[0]) == "normal"
     assert len(calls[1][0].notes) == len(ch.notes) - 1
     assert AS.scan(d, songs.CHART_DIR)[0].ignored
-    # удалить с подтверждением
     monkeypatch.setattr(startup, "ask", lambda clock, rec: "delete")
     monkeypatch.setattr(dialogs, "confirm", lambda *a, **k: False)
     assert startup.handle(None, recs[0]) == "later" and AS.scan(d, songs.CHART_DIR)

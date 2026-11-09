@@ -2,6 +2,8 @@
 import os
 import wave
 
+import numpy as np
+
 import pygame
 import pytest
 
@@ -73,9 +75,9 @@ def test_add_undo_redo_and_dirty(song_env, tmp_path):
     assert not ed.chart.notes
     ed._redo()
     assert len(ed.chart.notes) == 1
-    ed.add_note(1234, 1)                       # точный дубликат отклоняется
+    ed.add_note(1234, 1)
     assert len(ed.chart.notes) == 1
-    ed.add_note(1240, 1)                       # близко, но не дубликат — раньше запрещалось (40 мс)
+    ed.add_note(1240, 1)
     assert len(ed.chart.notes) == 2
 
 
@@ -87,7 +89,7 @@ def test_save_clears_dirty_and_writes_file(song_env, tmp_path):
     assert not ed.dirty
     assert os.path.isfile(ed.chart.path)
     ed._undo()
-    assert ed.dirty                           # undo после сохранения снова делает чарт изменённым
+    assert ed.dirty
     ed._redo()
     assert not ed.dirty
 
@@ -198,13 +200,13 @@ def test_quantize_moves_to_grid_and_undoes(song_env, tmp_path):
 def test_autosave_runs_and_recovers(song_env, tmp_path):
     ed = mkeditor(song_env, tmp_path)
     ed.add_note(700, 3)
-    ed._maybe_autosave()            # обычная правка: сразу не пишем (нет частых записей на диск)
+    ed._maybe_autosave()
     assert ed.autosaver.writes == 0
     ed.autosaver.dirty_since -= 100
     ed._maybe_autosave()
     assert ed.autosaver.writes == 1
     ed._maybe_autosave()
-    assert ed.autosaver.writes == 1  # без новых правок повторной записи нет
+    assert ed.autosaver.writes == 1
     recs = AS.scan(str(tmp_path / "as"), songs.CHART_DIR)
     assert recs and recs[0].name == "Тест"
     ed2 = E.Editor(pygame.time.Clock(), AS.restore_chart(recs[0]), recovery=recs[0],
@@ -280,14 +282,46 @@ def test_speed_change_keeps_clock_and_audio_position_in_sync(song_env, tmp_path,
     ed.cursor = 10345.0
     ed.speed_i = E.SPEEDS.index(0.5)
     ed._start_audio(ed.cursor)
-    assert calls[-1][1] == pytest.approx(20690.0)                 # реальные мс замедленной дорожки
-    fake[0] += 1.0                                                 # прошла 1 реальная секунда
-    assert ed._now() == pytest.approx(10345.0 + 500.0)            # в чарте — 0.5 с
+    assert calls[-1][1] == pytest.approx(20690.0)
+    fake[0] += 1.0
+    assert ed._now() == pytest.approx(10345.0 + 500.0)
     ed.playing = True
     ed._tick(0.016)
     cur = ed.cursor
     ed._set_speed(E.SPEEDS.index(1.0))
-    assert calls[-1][1] == pytest.approx(cur)                      # на 1x звук стартует с позиции курсора
+    assert calls[-1][1] == pytest.approx(cur)
     fake[0] += 2.0
     assert ed._now() == pytest.approx(cur + 2000.0)
     ed.playing = False
+
+
+def test_auto_beat_sets_grid_without_moving_notes_and_undoes(song_env, tmp_path, monkeypatch):
+    """Кнопка АВТО-РИТМ: ставит BPM и смещение в сетку, ноты на месте, откат Ctrl+Z возвращает сетку."""
+    import beatdetect
+    sr = 22050
+    rng = np.random.default_rng(5)
+    y = rng.standard_normal(sr * 20) * 0.02
+    tt = np.arange(int(0.02 * sr)) / sr
+    burst = np.sin(2 * np.pi * 150 * tt) * np.exp(-tt * 200) * 0.8
+    t0 = 0.25
+    while t0 < 19.5:
+        s0 = int(t0 * sr)
+        y[s0:s0 + len(burst)] += burst
+        t0 += 60.0 / 120
+    pcm = (np.clip(y, -1, 1) * 32767).astype(np.int16)
+    p = tmp_path / "songs" / "beat.wav"
+    with wave.open(str(p), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes(pcm.tobytes())
+    ed = mkeditor(song_env, tmp_path, notes=[(1000, 1, 0), (2500, 2, 0)])
+    ed.song_path = str(p)
+    before_notes = [(n.t, n.lane) for n in ed.chart.notes]
+    before_bpm = ed.grid.bpm
+    ed._auto_grid()
+    assert abs(ed.grid.bpm - 120) < 0.5
+    assert [(n.t, n.lane) for n in ed.chart.notes] == before_notes
+    ed._undo()
+    assert ed.grid.bpm == before_bpm
+    assert [(n.t, n.lane) for n in ed.chart.notes] == before_notes

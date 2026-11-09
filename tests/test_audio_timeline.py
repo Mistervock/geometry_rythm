@@ -11,41 +11,64 @@ import stretch
 
 @pytest.fixture
 def click_song(tmp_path, monkeypatch):
+    """Песня-метроном: удар 1 кГц длиной 15 мс каждые 0.5 с (как настоящий транзиент), затем тишина."""
     monkeypatch.setattr(stretch, "DIR", str(tmp_path / "speed"))
-    sr, dur = 22050, 6
-    x = np.zeros(sr * dur, dtype=np.int16)
-    for k in range(int(dur / 0.5)):
+    sr, dur = 44100, 8
+    x = np.zeros(sr * dur, dtype=np.float64)
+    tt = np.arange(int(0.015 * sr)) / sr
+    burst = 0.8 * np.sin(2 * np.pi * 1000 * tt) * np.hanning(len(tt))
+    for k in range(int((dur - 1) / 0.5)):
         s = int(k * 0.5 * sr)
-        x[s:s + 40] = 20000
+        x[s:s + len(burst)] += burst
+    pcm = (x * 32767).astype(np.int16)
     p = tmp_path / "song.wav"
     with wave.open(str(p), "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(sr)
-        w.writeframes(x.tobytes())
+        w.writeframes(pcm.tobytes())
     return str(p)
 
 
-def _clicks(path):
+def _read(path):
     with wave.open(path) as w:
         ch, rate = w.getnchannels(), w.getframerate()
-        a = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).reshape(-1, ch)[:, 0]
-    idx = np.where(np.abs(a) > 10000)[0]
-    out, last = [], -10 ** 9
-    for i in idx:
-        if i - last > rate * 0.2:
-            out.append(i / rate * 1000.0)
-        last = i
-    return out
+        a = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).reshape(-1, ch)[:, 0].astype(float)
+    return a, rate
+
+
+def _onsets(a, rate):
+    """Моменты начала ударов (сек) по огибающей: удар — когда сглаженная огибающая поднимается выше 30% максимума."""
+    env = np.convolve(np.abs(a), np.ones(rate // 100) / (rate // 100), mode="same")
+    above = env > env.max() * 0.3
+    return np.where(above & ~np.roll(above, 1))[0] / rate
 
 
 def test_clicks_stay_at_chart_time_for_every_speed(click_song):
-    base = _clicks(stretch.ensure(click_song, 1.0))
-    assert len(base) >= 10
-    for speed in (0.5, 0.75, 1.25):
-        got = [c * speed for c in _clicks(stretch.ensure(click_song, speed))]
-        assert len(got) == len(base)
-        assert max(abs(a - b) for a, b in zip(got, base)) < 2.0, speed
+    base_a, rate = _read(stretch.ensure(click_song, 1.0))
+    expected = np.arange(0.5, 7, 0.5)
+    for speed in (0.75, 0.5):
+        a, _ = _read(stretch.ensure(click_song, speed))
+        found = _onsets(a, rate)
+        for e in expected / speed:
+            assert np.min(np.abs(found - e)) < 0.02, (speed, e)
+
+
+def test_pitch_is_preserved_when_slowed(click_song, tmp_path):
+    sr = 44100
+    t = np.arange(sr * 4) / sr
+    sig = (0.5 * np.sin(2 * np.pi * 440 * t) * 32767).astype(np.int16)
+    p = tmp_path / "tone.wav"
+    with wave.open(str(p), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes(sig.tobytes())
+    for speed in (0.5, 0.75):
+        a, rate = _read(stretch.ensure(str(p), speed))
+        spec = np.abs(np.fft.rfft(a * np.hanning(len(a))))
+        f = np.fft.rfftfreq(len(a), 1 / rate)[np.argmax(spec[5:]) + 5]
+        assert abs(f - 440) < 2.0, (speed, f)
 
 
 def test_normal_speed_is_cached_pcm_not_original(click_song):

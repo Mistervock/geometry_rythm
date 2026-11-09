@@ -79,7 +79,6 @@ def handle(clock, rec):
         AS.ignore(AS.default_dir(), rec)
         _open_editor(clock, chart)
         return "normal"
-    # restore
     try:
         chart = AS.restore_chart(rec)
     except (chartmod.ChartFormatError, ValueError, TypeError) as e:
@@ -99,7 +98,7 @@ def run(clock):
         AS.cleanup()
         stretch.prune()
         found = [r for r in AS.scan() if not r.ignored]
-    except Exception as e:                       # noqa: BLE001 — сбой проверки не должен мешать запуску
+    except Exception as e:
         print(f"[autosave] scan: {e}")
         return
     for rec in found:
@@ -111,7 +110,7 @@ def open_editor(clock, chart):
     rec = None
     try:
         rec = AS.find_for(chart)
-    except Exception as e:                       # noqa: BLE001
+    except Exception as e:
         print(f"[autosave] find_for: {e}")
     if rec is not None and not rec.ignored:
         res = handle(clock, rec)

@@ -1,12 +1,15 @@
 
 #-- Импорт
+import copy
 import os
 import sys
 import time
 
 import pygame
 
+import anim as AN
 import audio
+import beatdetect
 import autochart
 import autosave as AS
 import beatgrid as BG
@@ -16,10 +19,12 @@ import dialogs
 import display
 import events
 import events_screen
+import fx as FX
 import history as H
 import holdviz
 import jsonio
 import keymap
+import practice as PR
 import screen_setting as SS
 import settings
 import song_settings
@@ -30,6 +35,12 @@ import validation as V
 from chart import Note
 from i18n import t
 from noteindex import NoteIndex
+
+
+def _t(text):
+    """Перевод сообщения. Импорт локальный: i18n тянет settings, а settings может тянуть этот модуль."""
+    from i18n import t
+    return t(text)
 
 SPEEDS = (0.5, 0.75, 1.0, 1.25)
 ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, ZOOM_DEFAULT = 0.05, 2.0, 1.25, 0.5
@@ -55,6 +66,7 @@ def help_lines():
     lane = " ".join(settings.key_label(n).upper() for n in settings.get("lane_keys"))
     return [
         (keymap.labels("play"), "играть / пауза"),
+        (k("test_here"), "тест с курсора (ничего не записывается)"),
         (lane, "поставить ноту на дорожку"),
         ("ЛКМ · Shift+рамка", "нота / выделить рамкой"),
         ("ЛКМ-тяга", "переместить ноту, хвост — длительность"),
@@ -95,7 +107,7 @@ def _notify(kind, **data):
     try:
         import progress
         return progress.notify(kind, **data) or []
-    except Exception as e:                       # noqa: BLE001 — намеренно: побочная функция
+    except Exception as e:
         print(f"[progress] {kind}: {e}")
         return []
 
@@ -121,7 +133,7 @@ class Editor:
         self._index_rev = -1
         self._ov = None
         self._ov_key = None
-        self.sel = {}                        # id(нота) -> нота
+        self.sel = {}
         self.drag = None
         self.clip = []
         self.taps = []
@@ -245,7 +257,7 @@ class Editor:
 
     def add_note(self, tm, lane, dur=0, free=False):
         tm = max(0, int(round(tm)))
-        if self.index.nearest(tm, lane, 0) is not None:       # единственный запрет: точная копия на дорожке
+        if self.index.nearest(tm, lane, 0) is not None:
             self._toast(t("Здесь уже есть нота"), 1.0)
             return None
         note = Note(tm, lane, dur)
@@ -419,6 +431,8 @@ class Editor:
         elif key == "bar":
             self._grid_edit(lambda: setattr(g, "bar", max(1, min(16, g.bar + direction))), "Размер такта",
                             coalesce="grid")
+        elif key == "auto":
+            self._auto_grid()
         elif key == "origin":
             self._grid_edit(lambda: g.set_offset(self.cursor), "Начало ритма")
             self._toast(f"{t('Начало ритма')}: {fmt_time(self.cursor)}", 1.5)
@@ -429,6 +443,20 @@ class Editor:
             self._grid_flag(lambda: (setattr(g, "show_beats", p[0]), setattr(g, "show_bars", p[1]),
                                      setattr(g, "show_sub", p[2])))
 
+    def _auto_grid(self):
+        """Определяет BPM и смещение по звуку песни и ставит их в сетку (отменяется Ctrl+Z; ноты не двигаются)."""
+        self._toast(t("Анализ ритма…"), 1.0)
+        self._draw(pygame.mouse.get_pos())
+        display.flip()
+        res = beatdetect.analyze_path(self.song_path)
+        if res is None:
+            self._toast(t("Ритм не найден: сетку задайте вручную"), 2.5)
+            return
+        g = self.grid
+        self._grid_edit(lambda: (g.set_bpm(res["bpm"]), g.set_offset(res["offset_ms"])), t("Авто-ритм"))
+        self._toast(f"BPM {res['bpm']:g} · {t('смещение')} {res['offset_ms']:g} {t('мс')} · "
+                    f"{t('уверенность')} {round(res['confidence'] * 100)}%", 3.0)
+
     def _grid_rows(self):
         g = self.grid
         lines = next((p[3] for p in LINE_PRESETS if p[:3] == (g.show_beats, g.show_bars, g.show_sub)), "ВСЕ")
@@ -438,7 +466,8 @@ class Editor:
                 ("div", "ДЕЛЕНИЕ", g.label()),
                 ("bar", "ДОЛЕЙ В ТАКТЕ", str(g.bar)),
                 ("lines", "ЛИНИИ", t(lines)),
-                ("origin", "НАЧАЛО ← КУРСОР", "")]
+                ("origin", "НАЧАЛО ← КУРСОР", ""),
+                ("auto", "АВТО-РИТМ", "")]
         rows = []
         for i, (key, label, value) in enumerate(data):
             rows.append((key, label, value, SS.UR(PANEL_X, 372 + i * 40, 150, 35)))
@@ -488,6 +517,21 @@ class Editor:
             self._start_audio(self.cursor)
         self._toast(f"{t('Скорость')}: {self.speed:g}×")
 
+    def _test_from_cursor(self):
+        """F5: играет копию чарта от курсора до конца песни, включая несохранённые правки.
+
+        Файлы, рекорды, история и призрак не меняются; исходный чарт в редакторе не трогается.
+        После теста курсор встаёт туда, где тест остановился."""
+        import runs
+        self._stop_play()
+        if self.cursor > self.duration - PR.MIN_LEN:
+            self._toast(t("Слишком близко к концу песни: отодвиньте курсор"), 120)
+            return
+        speed = self.speed if self.speed in PR.SPEEDS else 1.0
+        outcome = runs.play_test(self.clock, copy.deepcopy(self.chart), int(self.cursor), speed)
+        if outcome is not None:
+            self.cursor = max(0.0, min(float(self.duration), float(outcome.get("end_ms", self.cursor))))
+
     def _toggle_play(self):
         if self.playing:
             self._stop_play()
@@ -509,7 +553,7 @@ class Editor:
             return
         length = int(round(self._now() - n.t))
         if length >= REC_HOLD_MS and n in self.chart.notes:
-            n.dur = min(MAX_HOLD, length)           # нота принадлежит последней записи «добавить», она её же и вернёт
+            n.dur = min(MAX_HOLD, length)
             self._ext_rev += 1
             self._touch()
 
@@ -591,7 +635,7 @@ class Editor:
         if self.autosaver is not None and self.dirty:
             try:
                 self.autosaver.save(self.hist.rev + self._ext_rev, "emergency", wait=True)
-            except Exception as e:                   # noqa: BLE001
+            except Exception as e:
                 print(f"[autosave] emergency: {e}")
 
     def _maybe_autosave(self):
@@ -890,6 +934,9 @@ class Editor:
         if keymap.hit("play", k):
             self._toggle_play()
             return None
+        if keymap.hit("test_here", k):
+            self._test_from_cursor()
+            return None
         shift = bool(mods & pygame.KMOD_SHIFT)
         if keymap.hit("seek_left", k):
             self._step_cursor(-1, shift)
@@ -1182,7 +1229,7 @@ class Editor:
         S.draw_grid(scr, (self.cursor * 0.04) % 60, 0.0)
         glitch_lvl, flash_lvl, images, cards, invert_lvl = events.active_fx(self.chart.events, self.cursor) \
             if self.fx_on else (0.0, 0.0, [], [], 0.0)
-        events.draw_images(scr, images)
+        events.draw_images(scr, images, AN.by_id(self.chart.animations))
 
         for i in range(4):
             x = C.FIELD_X + i * (C.LANE_W + C.LANE_GAP)
@@ -1232,6 +1279,8 @@ class Editor:
         if flash_lvl > 0:
             self.white.set_alpha(int(255 * 0.85 * flash_lvl))
             scr.blit(self.white, (0, 0))
+        if self.fx_on:
+            FX.frame(scr, FX.active_levels(self.chart.events, self.cursor, self.chart.grid), self.cursor)
 
         if self.name_edit:
             box = SS.UR(SS.REF_W // 2 - 210, 300, 420, 60)

@@ -25,13 +25,37 @@ import time
 import jsonio
 import validation as V
 
+
+def _lang():
+    from settings import get
+    return get("lang")
+
+
+_busy = False
+
+
+def _t(text):
+    """Перевод сообщения. Импорт локальный (i18n тянет settings, а settings читает файлы через этот модуль).
+    Повторный вход возвращает русский текст — так цикл settings → jsonio → _t не образуется."""
+    global _busy
+    if _busy:
+        return text
+    _busy = True
+    try:
+        from i18n import t
+        return t(text)
+    except Exception:
+        return text
+    finally:
+        _busy = False
+
 FORMAT = "gr-autosave"
 VERSION = 1
 SUFFIX = ".autosave.json"
 GENERATIONS = 3
-ROTATE_AFTER = 120.0          # секунд: прежнее автосохранение уходит в «.1» не чаще этого
-INTERVAL = 20.0               # через сколько секунд после первой несохранённой правки пишем автосохранение
-IMPORTANT_DEBOUNCE = 3.0      # после «важной» правки — не чаще раза в 3 секунды
+ROTATE_AFTER = 120.0
+INTERVAL = 20.0
+IMPORTANT_DEBOUNCE = 3.0
 MAX_AGE_DAYS = 30
 MAX_FILES = 60
 
@@ -87,11 +111,11 @@ class Autosaver:
         self.draft_id = draft_id or os.urandom(4).hex()
         self.key = chart_key(chart, self.draft_id)
         self.base_hash = source_hash(chart.path)
-        self.saved_rev = -1            # ревизия, которая уже записана
-        self.dirty_since = None        # когда появились первые несохранённые правки
+        self.saved_rev = -1
+        self.dirty_since = None
         self.last_save_time = 0.0
-        self.last_saved_at = None      # время последней успешной записи (для интерфейса)
-        self.state = "idle"            # idle | saving | ok | error
+        self.last_saved_at = None
+        self.state = "idle"
         self.error = ""
         self.writes = 0
         self._lock = threading.Condition()
@@ -175,7 +199,7 @@ class Autosaver:
             with self._lock:
                 self.state = "error"
                 self.error = str(e)
-                self.saved_rev = -1            # попробуем снова при следующей проверке
+                self.saved_rev = -1
         finally:
             with self._lock:
                 self._busy = False
@@ -277,13 +301,13 @@ def _read_envelope(path):
         return None, res.message or res.kind
     env = res.data
     if not isinstance(env, dict) or env.get("format") != FORMAT:
-        return None, "не файл автосохранения"
+        return None, _t("не файл автосохранения")
     ver = env.get("version")
     if not isinstance(ver, int) or ver > VERSION or ver < 1:
-        return None, f"неподдерживаемая версия автосохранения {ver!r}"
+        return None, f"{_t('неподдерживаемая версия автосохранения')} {ver!r}"
     clean, rep = V.check_chart(env.get("chart"))
     if clean is None:
-        return None, rep.first_error()
+        return None, rep.first_error(_lang())
     return env, ""
 
 
@@ -353,21 +377,21 @@ def scan(directory=None, chart_dir=None):
 def _classify(key, path, env, chart_dir):
     chart_file = env.get("chart_file")
     if not chart_file:
-        return Recoverable(key, path, DRAFT, env, None, "чарт ещё ни разу не сохранялся")
+        return Recoverable(key, path, DRAFT, env, None, _t("чарт ещё ни разу не сохранялся"))
     source = os.path.join(chart_dir, os.path.basename(chart_file))
     if not os.path.isfile(source):
-        return Recoverable(key, path, ORPHAN, env, None, "исходного файла чарта больше нет")
+        return Recoverable(key, path, ORPHAN, env, None, _t("исходного файла чарта больше нет"))
     res = jsonio.read(source)
     if res.ok and isinstance(res.data, dict):
         same_song = res.data.get("song") == (env.get("chart") or {}).get("song")
         same_id = (not env.get("chart_id")) or (not res.data.get("id")) or res.data.get("id") == env.get("chart_id")
         if not (same_song and same_id):
-            return Recoverable(key, path, ORPHAN, env, None, "файл с этим именем теперь содержит другой чарт")
+            return Recoverable(key, path, ORPHAN, env, None, _t("файл с этим именем теперь содержит другой чарт"))
         if _same_content(res.data, env["chart"]):
             return Recoverable(key, path, IDENTICAL, env, source)
     base = env.get("base_hash") or ""
     if base and source_hash(source) != base:
-        return Recoverable(key, path, CONFLICT, env, source, "исходный чарт изменился после начала редактирования")
+        return Recoverable(key, path, CONFLICT, env, source, _t("исходный чарт изменился после начала редактирования"))
     return Recoverable(key, path, NEWER, env, source)
 
 
@@ -401,7 +425,7 @@ def _scan_legacy(directory, names):
         env = {"name": clean["name"], "song": clean["song"], "saved_ts": ts, "chart": res.data,
                "saved_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts)), "notes": len(clean["notes"]),
                "chart_file": None}
-        out.append(Recoverable(n[:-5], path, LEGACY, env, None, "автосохранение старого формата"))
+        out.append(Recoverable(n[:-5], path, LEGACY, env, None, _t("автосохранение старого формата")))
     return out
 
 
@@ -418,7 +442,7 @@ def restore_chart(rec):
     else:
         ch.path = None
         ch.id = ""
-        suffix = " (восстан.)"
+        suffix = f" ({_t('восстан.')})"
         ch.name = (ch.name[:V.NAME_MAX - len(suffix)] + suffix)
     return ch
 

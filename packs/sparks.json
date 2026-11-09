@@ -1,0 +1,14 @@
+{
+  "format": "geometry-rhythm-pack",
+  "api": 1,
+  "id": "sparks",
+  "name": "Искры со следом",
+  "description": "Частицы с хвостом, которые падают под действием гравитации.",
+  "dur": 1000,
+  "params": [
+    {"id": "count", "name": "Количество", "min": 4, "max": 48, "step": 2, "default": 24}
+  ],
+  "layers": [
+    {"kind": "particles", "start": 0, "end": 1, "count": "$count", "speed": [200, 420], "size": [1.5, 3], "gravity": 500, "spread": 110, "trail": true, "length": 36, "alpha": [255, 40], "colour": "$colour"}
+  ]
+}

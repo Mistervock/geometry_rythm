@@ -16,23 +16,56 @@ import math
 import secrets
 import re
 
-CHART_VERSION = 5          # текущая версия формата чарта
-MIN_VERSION = 1            # самая старая версия, которую умеем мигрировать
+import anim as AN
+import cine as CN
+import modifiers as MD
+import packs as PK
+import tracks
+
+CHART_VERSION = 8
+MIN_VERSION = 1
 LANES = 4
 MAX_NOTE_T = 6 * 3600 * 1000
-MAX_HOLD = 600_000          # жёсткий предел длительности удержания
-SOFT_HOLD = 10_000          # длиннее — только предупреждение (редактор ограничивает так же)
+MAX_HOLD = 600_000
+SOFT_HOLD = 10_000
 NAME_MAX, CHARTER_MAX, ACH_MAX, FOLDER_MAX = 24, 40, 80, 24
 MAX_FOLDERS = 64
 
 ERROR, WARNING, FIX, INFO = "error", "warning", "fix", "info"
 _ORDER = {ERROR: 0, WARNING: 1, FIX: 2, INFO: 3}
-PER_CODE_KEEP = 12          # подробно храним первые N проблем каждого вида, остальное — счётчиком
+PER_CODE_KEEP = 12
 
 #-- Тексты: код -> (по-русски, по-английски)
 MESSAGES = {
     "json.syntax": ("файл повреждён: {detail}", "file is corrupted: {detail}"),
     "json.missing": ("файл не найден", "file not found"),
+    "pack.file": ("файл пакета не открыт или не JSON: {where}", "pack file cannot be read or is not JSON: {where}"),
+    "pack.not_object": ("пакет должен быть объектом {…} — пакет пропущен", "pack must be an object {…} — pack skipped"),
+    "pack.format": ("не пакет Geometry Rhythm (format={where}) — пакет пропущен",
+                    "not a Geometry Rhythm pack (format={where}) — pack skipped"),
+    "pack.api": ("версия api пакета не указана или неверна — пакет пропущен",
+                 "pack api version is missing or invalid — pack skipped"),
+    "pack.api_new": ("пакет для более новой версии api ({where}) — пакет пропущен",
+                     "pack targets a newer api ({where}) — pack skipped"),
+    "pack.id": ("id пакета: латиница, цифры и «_», 2–32 символа — пакет пропущен",
+                "pack id: latin letters, digits and «_», 2–32 chars — pack skipped"),
+    "pack.no_layers": ("у пакета нет допустимых слоёв — пакет пропущен", "pack has no valid layers — pack skipped"),
+    "pack.layer_kind": ("неизвестный вид слоя {where} — слой пропущен", "unknown layer kind at {where} — layer skipped"),
+    "pack.layer_type": ("слой {where} должен быть объектом — пропущен", "layer {where} must be an object — skipped"),
+    "pack.range": ("значение вне пределов ({where}) — приведено", "value out of range ({where}) — clamped"),
+    "pack.field_type": ("значение должно быть числом ({where}) — взято по умолчанию",
+                        "value must be a number ({where}) — default used"),
+    "pack.colour": ("цвет: «#rrggbb» или \"$colour\" ({where}) — взят белый",
+                    "colour: «#rrggbb» or \"$colour\" ({where}) — white used"),
+    "pack.unknown_param": ("параметр {where} не объявлен в пакете", "parameter {where} is not declared in the pack"),
+    "pack.params_type": ("«params» должен быть списком — параметры не применены",
+                         "«params» must be a list — parameters ignored"),
+    "pack.param_id": ("параметр {where} без корректного id — пропущен", "parameter {where} has no valid id — skipped"),
+    "pack.too_many": ("слишком много элементов ({where}) — лишние пропущены",
+                      "too many items ({where}) — extra ones skipped"),
+    "pack.duplicate": ("пакет «{where}» повторяется — взят последний", "pack «{where}» appears twice — last one used"),
+    "event.pack_missing": ("пакет «{id}» не найден в библиотеке — событие сохранено, эффекта не будет",
+                          "pack «{id}» is not in the library — event kept, nothing will show"),
     "json.access": ("нет доступа к файлу: {detail}", "cannot access the file: {detail}"),
     "json.type": ("неожиданная структура данных", "unexpected data structure"),
     "chart.not_object": ("корень чарта должен быть объектом {…}", "chart root must be an object {…}"),
@@ -43,6 +76,15 @@ MESSAGES = {
                               "format version is missing — treating as an old chart"),
     "chart.migrated": ("чарт версии {version} будет обновлён до {max} при сохранении",
                        "chart version {version} will be upgraded to {max} on save"),
+    "modifiers.type": ("«modifiers» должен быть списком — набор модификаторов не применён",
+                       "«modifiers» must be a list — modifiers not applied"),
+    "modifiers.item_type": ("модификатор должен быть объектом {id, value} — пропущен",
+                            "modifier must be an {id, value} object — skipped"),
+    "modifiers.unknown": ("неизвестный модификатор «{id}» — пропущен", "unknown modifier «{id}» — skipped"),
+    "modifiers.value": ("неверное значение у модификатора «{id}» — пропущен",
+                        "invalid value for modifier «{id}» — skipped"),
+    "modifiers.duplicate": ("модификатор «{id}» указан дважды — оставлен первый",
+                            "modifier «{id}» is listed twice — first one kept"),
     "chart.no_notes": ("нет списка нот «notes»", "no «notes» list"),
     "chart.notes_type": ("«notes» должен быть списком", "«notes» must be a list"),
     "chart.no_song": ("не указана песня «song»", "song name «song» is missing"),
@@ -101,6 +143,7 @@ MESSAGES = {
     "event.skipped_total": ("пропущено некорректных событий: {count}", "invalid events skipped: {count}"),
     "folder.bad": ("запись папки некорректна — пропущена", "invalid folder entry — skipped"),
     "folder.duplicate": ("папка «{name}» повторяется — лишняя пропущена", "folder «{name}» repeated — skipped"),
+    "folder.kind": ("тип дорожки «{name}» неизвестен — поставлен «свободная»", "unknown track type for «{name}» — set to «custom»"),
     "grid.type": ("настройки сетки некорректны — взяты по умолчанию", "invalid grid settings — defaults used"),
     "grid.range": ("параметр сетки «{field}» вне пределов — исправлен", "grid parameter «{field}» out of range — fixed"),
     "file.corrupt_moved": ("повреждённый файл сохранён как {path}", "corrupted file kept as {path}"),
@@ -112,6 +155,25 @@ MESSAGES = {
     "records.entry": ("запись рекордов #{index} некорректна — пропущена", "record #{index} is invalid — skipped"),
     "list.entry": ("запись #{index} не строка — пропущена", "entry #{index} is not a string — skipped"),
     "dict.entry": ("запись «{key}» некорректна — пропущена", "entry «{key}» is invalid — skipped"),
+    "anim.item_type": ("анимация должна быть объектом — пропущена", "animation must be an object — skipped"),
+    "anim.list_type": ("«animations» должен быть списком — анимации не загружены",
+                       "«animations» must be a list — animations not loaded"),
+    "anim.too_many": ("анимаций больше {n} — лишние пропущены", "more than {n} animations — extra ones skipped"),
+    "anim.id": ("идентификатор анимации повторяется или некорректен — назначен новый",
+                "animation id is repeated or invalid — a new one assigned"),
+    "anim.keys": ("«keys» анимации должен быть списком — ключи сброшены", "animation «keys» must be a list — keys reset"),
+    "anim.key_type": ("ключ анимации должен быть объектом — пропущен", "animation key must be an object — skipped"),
+    "anim.value": ("значение ключа анимации некорректно или вне пределов — приведено",
+                   "animation key value is invalid or out of range — adjusted"),
+    "anim.ease": ("неизвестный переход у ключа — взят мягкий", "unknown key easing — soft easing used"),
+    "anim.loop_key": ("в зацикленной анимации ключ на конце не используется — цикл берёт первый ключ",
+                      "in a looped animation the end key is ignored — the loop uses the first key"),
+    "anim.duplicate_key": ("два ключа в одной точке времени — оставлен первый", "two keys at one time — first kept"),
+    "anim.too_many_keys": ("ключей больше {n} — лишние пропущены", "more than {n} keys — extra ones skipped"),
+    "event.anim_missing": ("анимация «{id}» не найдена — событие без неё",
+                           "animation «{id}» not found — event plays without it"),
+    "event.enum": ("поле «{field}» имеет неизвестное значение — взято по умолчанию",
+                   "field «{field}» has an unknown value — default used"),
 }
 
 
@@ -143,9 +205,9 @@ class Report:
     def __init__(self, subject=""):
         self.subject = subject
         self.issues = []
-        self.counts = {}            # code -> сколько всего
+        self.counts = {}
         self.sev_counts = {ERROR: 0, WARNING: 0, FIX: 0, INFO: 0}
-        self.lossy = False          # часть записей отброшена: сохранение перезапишет их потерю
+        self.lossy = False
         self.dropped_notes = 0
         self.dropped_events = 0
 
@@ -293,7 +355,7 @@ def check_grid(raw, rep, where="grid"):
 #-- Чарт
 
 KNOWN_KEYS = {"version", "id", "song", "name", "charter", "difficulty", "notes", "events", "folders",
-              "achievement", "grid"}
+              "achievement", "grid", "modifiers", "animations"}
 
 
 def new_chart_id():
@@ -342,7 +404,6 @@ def check_chart(data, duration_ms=None, image_exists=None):
 
     clean = {"version": CHART_VERSION, "song": song}
 
-    # идентификатор
     cid = data.get("id")
     if cid is None:
         rep.info("chart.id_new")
@@ -366,9 +427,14 @@ def check_chart(data, duration_ms=None, image_exists=None):
     clean["difficulty"] = d2
 
     clean["grid"] = check_grid(data.get("grid"), rep)
+    clean["modifiers"] = MD.normalize(data.get("modifiers"),
+                                      warn=lambda code, **a: rep.warn(code, "modifiers", **a))
+    clean["animations"] = AN.normalize_list(data.get("animations"),
+                                            warn=lambda code, **a: rep.warn(code, "animations", **a))
+    anim_ids = {a["id"] for a in clean["animations"]}
     clean["notes"] = _check_notes(raw_notes, rep, duration_ms)
     clean["events"], clean["folders"] = _check_events_and_folders(
-        data.get("events"), data.get("folders"), rep, duration_ms, image_exists)
+        data.get("events"), data.get("folders"), rep, duration_ms, image_exists, anim_ids, PK.known_ids())
 
     extra = {k: v for k, v in data.items() if k not in KNOWN_KEYS}
     if extra:
@@ -458,7 +524,7 @@ def _check_notes(raw_notes, rep, duration_ms):
 
 def _check_note_conflicts(notes, rep):
     last_start = [-1] * LANES
-    run_end = [-1] * LANES                  # самый поздний конец удержания на дорожке
+    run_end = [-1] * LANES
     for t, lane, d in notes:
         if last_start[lane] == t:
             rep.warn("note.duplicate", lane=lane, t=t)
@@ -468,7 +534,7 @@ def _check_note_conflicts(notes, rep):
         run_end[lane] = max(run_end[lane], t + d)
 
 
-def _check_events_and_folders(raw_events, raw_folders, rep, duration_ms, image_exists):
+def _check_events_and_folders(raw_events, raw_folders, rep, duration_ms, image_exists, anim_ids=None, pack_ids=None):
     folders, seen = [], set()
     if raw_folders is not None and not isinstance(raw_folders, list):
         rep.warn("folder.bad", "folders")
@@ -484,7 +550,12 @@ def _check_events_and_folders(raw_events, raw_folders, rep, duration_ms, image_e
         if len(folders) >= MAX_FOLDERS:
             continue
         seen.add(name)
-        folders.append({"name": name, "locked": bool(f.get("locked", False))})
+        kind = f.get("kind", tracks.DEFAULT_KIND)
+        if kind not in tracks.KINDS:
+            rep.fix("folder.kind", f"folders[{i}]", name=name)
+            kind = tracks.DEFAULT_KIND
+        folders.append({"name": name, "locked": bool(f.get("locked", False)), "kind": kind,
+                        "visible": bool(f.get("visible", True))})
 
     events = []
     skipped = 0
@@ -492,7 +563,7 @@ def _check_events_and_folders(raw_events, raw_folders, rep, duration_ms, image_e
         rep.warn("event.not_object", "events")
         raw_events = []
     for i, raw in enumerate(raw_events or []):
-        ev = check_event(raw, f"events[{i}]", rep, image_exists)
+        ev = check_event(raw, f"events[{i}]", rep, image_exists, anim_ids, pack_ids)
         if ev is None:
             skipped += 1
             continue
@@ -514,8 +585,11 @@ def _check_events_and_folders(raw_events, raw_folders, rep, duration_ms, image_e
     return events, folders
 
 
-def check_event(raw, where, rep, image_exists=None):
-    """Проверяет одно событие. Возвращает нормализованный словарь события или None (пропущено)."""
+def check_event(raw, where, rep, image_exists=None, anim_ids=None, pack_ids=None):
+    """Проверяет одно событие. Возвращает нормализованный словарь события или None (пропущено).
+
+    anim_ids — id анимаций чарта. Ссылка на неизвестную анимацию сбрасывается с предупреждением;
+    None — проверка ссылок не выполняется (событие проверяется отдельно)."""
     import events as EV
     if not isinstance(raw, dict):
         rep.warn("event.not_object", where)
@@ -544,6 +618,29 @@ def check_event(raw, where, rep, image_exists=None):
         return None
     if kind == "card" and isinstance(raw.get("text"), str) and len(raw["text"]) > EV.CARD_TEXT_MAX:
         rep.fix("event.text_trim", where)
+    if kind == "fx" and "kind" in raw and raw["kind"] not in EV.FX.KINDS:
+        rep.fix("event.enum", where, field="kind")
+    if kind in ("image", "video"):
+        if "look" in raw and raw["look"] not in EV.FX.LOOKS:
+            rep.fix("event.enum", where, field="look")
+        aid = raw.get("anim_id")
+        if aid and not isinstance(aid, str):
+            rep.fix("event.enum", where, field="anim_id")
+        elif aid and anim_ids is not None and ev["anim_id"] not in anim_ids:
+            rep.fix("event.anim_missing", where, id=ev["anim_id"])
+            ev["anim_id"] = ""
+    if kind == "camera" and "ease" in raw and raw["ease"] not in AN.EASES:
+        rep.fix("event.enum", where, field="ease")
+    if kind == "transition":
+        for field, allowed in (("kind", CN.KINDS), ("mode", CN.MODES), ("ease", AN.EASES)):
+            if field in raw and raw[field] not in allowed:
+                rep.fix("event.enum", where, field=field)
+    if kind == "pack":
+        pid = raw.get("pack", "")
+        if pid and not isinstance(pid, str):
+            rep.fix("event.enum", where, field="pack")
+        elif pid and pack_ids is not None and ev["pack"] not in pack_ids:
+            rep.warn("event.pack_missing", where, id=ev["pack"])
     if kind in ("image", "video") and image_exists is not None:
         if not ev["file"]:
             rep.warn("event.resource_empty", where)
@@ -558,7 +655,7 @@ def check_settings(raw, defaults, limits, extra_rules=None):
     """Проверка настроек. Неизвестные ключи сохраняются (моды), известные приводятся к допустимым."""
     rep = Report("settings")
     out = dict(defaults)
-    if raw is None:                       # файла нет — первый запуск, это не проблема
+    if raw is None:
         return out, rep
     if not isinstance(raw, dict):
         rep.warn("json.type")

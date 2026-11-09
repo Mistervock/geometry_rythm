@@ -10,9 +10,29 @@ import pygame
 
 import autochart
 import chart as chartmod
+import modifiers as MD
 import config as C
 import jsonio
 import validation as V
+
+
+_busy = False
+
+
+def _t(text):
+    """Перевод сообщения. Импорт локальный (i18n тянет settings, а settings читает файлы через этот модуль).
+    Повторный вход возвращает русский текст — так цикл settings → jsonio → _t не образуется."""
+    global _busy
+    if _busy:
+        return text
+    _busy = True
+    try:
+        from i18n import t
+        return t(text)
+    except Exception:
+        return text
+    finally:
+        _busy = False
 
 SONG_DIR = C.root("songs")
 CHART_DIR = C.root("data", "charts")
@@ -24,10 +44,17 @@ BACKUP_DIR = C.root("data", "backups", "charts")
 CHART_BACKUPS = 5
 
 
+def _mod_dirs(kind):
+    import modsys
+    return modsys.dirs(kind)
+
+
 def list_songs():
-    if not os.path.isdir(SONG_DIR):
-        return []
-    names = [f for f in os.listdir(SONG_DIR) if f.lower().endswith(EXTS)]
+    """Песни игры и модов (имя из папки игры важнее одноимённой из мода)."""
+    names = set()
+    for d in [SONG_DIR] + _mod_dirs("songs"):
+        if os.path.isdir(d):
+            names.update(f for f in os.listdir(d) if f.lower().endswith(EXTS))
     return sorted(names, key=str.lower)
 
 
@@ -59,6 +86,10 @@ def display_title(song):
 
 
 def song_path(song):
+    for d in [SONG_DIR] + _mod_dirs("songs"):
+        path = os.path.join(d, song)
+        if os.path.isfile(path):
+            return path
     return os.path.join(SONG_DIR, song)
 
 
@@ -67,7 +98,7 @@ def _safe(text):
     return "".join(keep)[:40] or "song"
 
 
-_chart_cache = {}           # путь -> (подпись файла, clean, report): список песен не перечитывает JSON каждый раз
+_chart_cache = {}
 
 
 def _signature(path):
@@ -120,15 +151,23 @@ def forget_cached(path=None):
         _chart_cache.pop(path, None)
 
 
+def _chart_files():
+    """(путь, из_мода) для всех чартов: сначала папка игры, затем моды."""
+    for d, from_mod in [(CHART_DIR, False)] + [(d, True) for d in _mod_dirs("charts")]:
+        if not os.path.isdir(d):
+            continue
+        for fname in sorted(os.listdir(d)):
+            if fname.endswith(".json"):
+                yield os.path.join(d, fname), from_mod
+
+
 def charts_for(song):
     result = []
-    if not os.path.isdir(CHART_DIR):
-        return result
-    for fname in os.listdir(CHART_DIR):
-        if not fname.endswith(".json"):
-            continue
-        ch, _ = load_chart_file(os.path.join(CHART_DIR, fname))
+    for path, from_mod in _chart_files():
+        ch, _ = load_chart_file(path)
         if ch is not None and ch.song == song:
+            if from_mod:
+                ch.from_mod = path
             result.append(ch)
     result.sort(key=lambda c: c.name.lower())
     return result
@@ -148,6 +187,10 @@ def save_chart(ch, backup=True):
     """Сохраняет чарт атомарно. Прежняя версия файла уходит в data/backups/charts (последние 5).
 
     Бросает jsonio.SaveError, если записать не удалось; старый файл при этом остаётся целым."""
+    if getattr(ch, "from_mod", None):
+        ch.path = None
+        ch.id = ""
+        ch.from_mod = None
     if ch.path is None:
         ch.path = os.path.join(CHART_DIR, f"{_safe(ch.song)}__{secrets.token_hex(4)}.json")
     ch.sort()
@@ -161,6 +204,8 @@ def save_chart(ch, backup=True):
 
 
 def delete_chart(ch):
+    if getattr(ch, "from_mod", None):
+        return
     if ch.path and os.path.exists(ch.path):
         jsonio.backup_file(ch.path, os.path.join(BACKUP_DIR, os.path.splitext(os.path.basename(ch.path))[0]),
                            keep=CHART_BACKUPS, tag=".deleted")
@@ -201,7 +246,7 @@ def migrate_legacy():
     if not data:
         return
     try:
-        ch = chartmod.Chart.from_dict({"song": "game.ogg", "name": "Авто", "notes": data.get("notes", [])})
+        ch = chartmod.Chart.from_dict({"song": "game.ogg", "name": _t("Авто"), "notes": data.get("notes", [])})
         save_chart(ch)
     except (chartmod.ChartFormatError, jsonio.SaveError):
         return
@@ -210,6 +255,17 @@ def migrate_legacy():
 #-- Обложки, авторы и цвета
 
 IMAGE_DIR = C.root("images")
+
+
+def image_path(name):
+    """Файл картинки/ролика: сначала папка images/ игры, потом папки модов. None — нет такого файла."""
+    if not name:
+        return None
+    for d in [IMAGE_DIR] + _mod_dirs("images"):
+        path = os.path.join(d, name)
+        if os.path.isfile(path):
+            return path
+    return None
 AUTHOR_COLORS_PATH = C.root("data", "author_colors.json")
 WINS_PATH = C.root("data", "wins.json")
 RANKS_PATH = C.root("data", "ranks.json")
@@ -223,8 +279,7 @@ def cover_path(song):
     name = meta(song).get("image", "")
     if not name:
         return None
-    path = os.path.join(IMAGE_DIR, name)
-    return path if os.path.isfile(path) else None
+    return image_path(name)
 
 
 def cover_surface(song):
@@ -340,14 +395,14 @@ def song_win_state(song):
 
 def all_charts():
     out = []
-    if not os.path.isdir(CHART_DIR):
-        return out
-    for fname in sorted(os.listdir(CHART_DIR)):
-        if fname.endswith(".json"):
-            try:
-                out.append(chartmod.Chart.load(os.path.join(CHART_DIR, fname)))
-            except Exception:
-                continue
+    for path, from_mod in _chart_files():
+        try:
+            ch = chartmod.Chart.load(path)
+        except Exception:
+            continue
+        if from_mod:
+            ch.from_mod = path
+        out.append(ch)
     return out
 
 
@@ -394,15 +449,15 @@ def import_chart(file_name):
         reason = "newer_version" if rep.has_code("chart.version_new") else "bad_format"
         raise ImportFailure(reason, rep)
     ch = chartmod.Chart.from_clean(clean, path=None, report=rep)
-    ch.id = ""                                   # импорт — новый чарт, прежний идентификатор не переносим
-    ch.name = ((ch.name or "Чарт") + " (импорт)")[:V.NAME_MAX]
+    ch.id = ""
+    ch.name = ((ch.name or "Чарт") + f" ({_t('импорт')})")[:V.NAME_MAX]
     save_chart(ch)
     return ch
 
 
 #-- Ранги: лучший результат на чарт и общий ранг песни
 
-RANKS = ("D", "C", "B", "A", "S")          # от худшего к лучшему; провал ранга не получает
+RANKS = ("D", "C", "B", "A", "S")
 RANK_POINTS = {g: i + 1 for i, g in enumerate(RANKS)}
 
 
@@ -411,27 +466,28 @@ def _ranks():
     return raw if isinstance(raw, dict) else {}
 
 
-def _rank_key(ch):
-    return os.path.basename(ch.path) if ch.path else None
+def _rank_key(ch, mods=()):
+    base = os.path.basename(ch.path) if ch.path else None
+    return base + MD.suffix(mods) if base else None
 
 
-def chart_best(ch, ranks=None):
-    """Лучший результат на чарте: {"grade", "acc", "score"} или None."""
-    key = _rank_key(ch)
+def chart_best(ch, ranks=None, mods=()):
+    """Лучший результат на чарте с данным набором модификаторов: {"grade", "acc", "score"} или None."""
+    key = _rank_key(ch, mods)
     entry = (_ranks() if ranks is None else ranks).get(key) if key else None
     if isinstance(entry, dict) and entry.get("grade") in RANK_POINTS:
         return entry
     return None
 
 
-def chart_rank(ch, ranks=None):
-    best = chart_best(ch, ranks)
+def chart_rank(ch, ranks=None, mods=()):
+    best = chart_best(ch, ranks, mods)
     return best["grade"] if best else None
 
 
-def record_rank(ch, grade, acc, score):
-    """Записывает результат победы. Возвращает (новый_рекорд, прежний_ранг)."""
-    key = _rank_key(ch)
+def record_rank(ch, grade, acc, score, mods=()):
+    """Записывает результат победы с данным набором модификаторов. Возвращает (новый_рекорд, прежний_ранг)."""
+    key = _rank_key(ch, mods)
     if key is None or grade not in RANK_POINTS:
         return False, None
     raw = _ranks()

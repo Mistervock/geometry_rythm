@@ -4,15 +4,18 @@ import os
 
 import pygame
 
+import anim as AN
+import cine as CN
 import config as C
+import fx as FX
 import screen_setting as SS
 import settings
 import style as S
 import video
 
-TYPES = ("glitch", "flash", "image", "bg", "video", "heal", "card", "invert")
-TYPE_NAMES = {"glitch": "ГЛЮК", "flash": "ВСПЫШКА", "image": "КАРТИНКА (БЕТА)", "bg": "ФОН", "video": "ВИДЕО (БЕТА)", "heal": "ХИЛЛ", "card": "КАРТОЧКА", "invert": "ИНВЕРСИЯ"}
-TYPE_COLORS = {"glitch": C.RED_LIGHT, "flash": C.WHITE, "image": C.GOLD, "bg": (200, 200, 210), "video": (120, 200, 255), "heal": C.WHITE, "card": (255, 200, 110), "invert": (190, 140, 255)}
+TYPES = ("glitch", "flash", "image", "bg", "video", "heal", "card", "invert", "fx", "camera", "transition", "pack")
+TYPE_NAMES = {"glitch": "ГЛЮК", "flash": "ВСПЫШКА", "image": "КАРТИНКА (БЕТА)", "bg": "ФОН", "video": "ВИДЕО (БЕТА)", "heal": "ХИЛЛ", "card": "КАРТОЧКА", "invert": "ИНВЕРСИЯ", "fx": "ЭФФЕКТ", "camera": "КАМЕРА", "transition": "ПЕРЕХОД", "pack": "ПАКЕТ"}
+TYPE_COLORS = {"glitch": C.RED_LIGHT, "flash": C.WHITE, "image": C.GOLD, "bg": (200, 200, 210), "video": (120, 200, 255), "heal": C.WHITE, "card": (255, 200, 110), "invert": (190, 140, 255), "fx": (120, 255, 200), "camera": (255, 170, 90), "transition": (230, 230, 255), "pack": (255, 120, 200)}
 DESCRIPTIONS = {
     "glitch": "Экран дрожит и рвётся на полосы. Сила и длительность настраиваются.",
     "flash": "Белая вспышка: появляется за «скорость появления» и гаснет за «длительность».",
@@ -22,10 +25,15 @@ DESCRIPTIONS = {
     "heal": "Белый круг падает быстрее нот. Поймать нажатием клавиши — +1 HP, промах — только глитч, без урона.",
     "card": "Текст на экране на заданное время. Плавно появляется и исчезает. Текст меняется в поле «Текст».",
     "invert": "На заданное время весь экран становится негативом. Длительность настраивается.",
+    "fx": "Эффект на весь экран: размытие, свечение, хроматика, волна или цветовой фильтр. «В ТАКТ» делает пульс по сетке.",
+    "camera": "Плавно меняет масштаб кадра и сдвигает его за «плавность». Новое событие камеры обрывает предыдущее и начинается с текущего положения.",
+    "transition": "Затемнение, диафрагма или шторка за «длительность». «Закрыть» держит экран закрытым до следующего перехода, «открыть» показывает игру, «акцент» закрывает и открывает. Enter пропускает переходы «открыть» и «акцент».",
+    "pack": "Визуальный пакет из библиотеки (кольца, частицы, вспышки). Пакет выбирается полем «Пакет» или клавишей B; параметры пакета — отдельными строками.",
 }
 BASE_BG = tuple(C.BG_DARK)
 ANIMS = ("pop", "fade", "drift")
 ANIM_NAMES = {"pop": "РЕЗКО", "fade": "ПЛАВНО", "drift": "ДВИЖЕНИЕ"}
+TINT_NONE = (255, 255, 255)
 IMAGE_DIR = C.root("images")
 IMAGE_EXT = (".png", ".jpg", ".jpeg")
 VIDEO_EXT = (".mp4", ".webm", ".mov", ".avi", ".mkv", ".m4v")
@@ -43,14 +51,19 @@ FIELDS = {
               ("y", "Смещение Y, px", -400, 400, 10, 0),
               ("fade", "Плавность, мс", 50, 2000, 50, 300),
               ("dx", "Движение X, px", -600, 600, 10, 0),
-              ("dy", "Движение Y, px", -400, 400, 10, 0)),
+              ("dy", "Движение Y, px", -400, 400, 10, 0),
+              ("look_amt", "Сила эффекта «ОБЪЕКТ», %", 0, 100, 5, 60)),
     "image": (("dur", "Длительность, мс", 200, 20000, 100, 3000),
               ("w", "Ширина, px", 80, 1280, 20, 480),
               ("x", "Смещение X, px", -600, 600, 10, 0),
               ("y", "Смещение Y, px", -400, 400, 10, 0),
               ("fade", "Плавность, мс", 50, 2000, 50, 300),
               ("dx", "Движение X, px", -600, 600, 10, 0),
-              ("dy", "Движение Y, px", -400, 400, 10, 0)),
+              ("dy", "Движение Y, px", -400, 400, 10, 0),
+              ("look_amt", "Сила эффекта «ОБЪЕКТ», %", 0, 100, 5, 60)),
+    "fx": (("amount", "Сила, %", 0, 100, 5, 60),
+           ("attack", "Нарастание, мс", 0, 5000, 50, 300),
+           ("dur", "Длительность, мс", 100, 60000, 100, 2000)),
     "bg": (("r", "Красный", 0, 255, 8, BASE_BG[0]),
            ("g", "Зелёный", 0, 255, 8, BASE_BG[1]),
            ("b", "Синий", 0, 255, 8, BASE_BG[2]),
@@ -59,17 +72,40 @@ FIELDS = {
              ("speed", "Скорость падения, %", 100, 300, 10, 170)),
     "card": (("dur", "Длительность, мс", 300, 20000, 100, 2500),),
     "invert": (("dur", "Длительность, мс", 50, 3000, 50, 200),),
+    "camera": (("dur", "Плавность, мс", 0, 10000, 50, 800),
+               ("zoom", "Масштаб, %", CN.ZOOM_MIN, CN.ZOOM_MAX, 5, 100),
+               ("x", "Сдвиг X, px", -CN.PAN_MAX_X, CN.PAN_MAX_X, 10, 0),
+               ("y", "Сдвиг Y, px", -CN.PAN_MAX_Y, CN.PAN_MAX_Y, 10, 0)),
+    "transition": (("dur", "Длительность, мс", 50, 5000, 50, 600),
+                   ("colour", "Цвет (0 чёрный … 3 голубой)", 0, len(CN.COLOURS) - 1, 1, 0)),
+    "pack": (("dur", "Длительность, мс", 100, 20000, 100, 1000),
+             ("lane", "Дорожка (0 — экран, 1=D … 4=K)", 0, 4, 1, 0),
+             ("x", "Смещение X, px", -600, 600, 10, 0),
+             ("y", "Смещение Y, px", -400, 400, 10, 0),
+             ("power", "Сила пакета, %", 10, 200, 10, 100),
+             ("colour", "Цвет пакета (0–5)", 0, 5, 1, 0)),
 }
 CARD_TEXT_MAX = 80
 
 
+def image_path(name):
+    """Путь к файлу картинки/ролика: папка игры, затем моды (см. songs.image_path)."""
+    import songs
+    return songs.image_path(name)
+
+
 def list_media(kind):
     exts = VIDEO_EXT if kind == "video" else IMAGE_EXT
+    names = set()
     try:
         os.makedirs(IMAGE_DIR, exist_ok=True)
-        names = [f for f in os.listdir(IMAGE_DIR) if f.lower().endswith(exts)]
+        import modsys
+        for d in [IMAGE_DIR] + modsys.dirs("images"):
+            if os.path.isdir(d):
+                names.update(f for f in os.listdir(d) if f.lower().endswith(exts))
     except OSError:
         return []
+    names = sorted(names, key=str.lower)
     return sorted(names, key=str.lower)
 
 
@@ -84,11 +120,26 @@ def _defaults(kind):
     if kind in ("image", "video"):
         ev["file"] = ""
         ev["anim"] = "fade"
-        ev["full"] = False                     # растянуть на весь экран
+        ev["full"] = False
+        ev["anim_id"] = ""
+        ev["look"] = ""
     if kind == "bg":
         ev["orig"] = False
     if kind == "card":
         ev["text"] = "Текст"
+    if kind == "fx":
+        ev["kind"] = "blur"
+        ev["beat"] = False
+    if kind == "camera":
+        ev["ease"] = AN.DEFAULT_EASE
+    if kind == "transition":
+        ev["kind"] = "fade"
+        ev["mode"] = "out"
+        ev["ease"] = AN.DEFAULT_EASE
+        ev["skip"] = True
+    if kind == "pack":
+        ev["pack"] = ""
+        ev["params"] = {}
     return ev
 
 
@@ -123,11 +174,49 @@ def normalize(raw):
         ev["file"] = str(raw.get("file", ""))[:120]
         ev["anim"] = raw.get("anim") if raw.get("anim") in ANIMS else "fade"
         ev["full"] = raw.get("full") is True or raw.get("full") in (1, "1", "true", "True")
+        anim_id = raw.get("anim_id", "")
+        ev["anim_id"] = anim_id[:16] if isinstance(anim_id, str) else ""
+        look = raw.get("look", "")
+        ev["look"] = look if look in FX.LOOKS else ""
     if kind == "bg":
         ev["orig"] = bool(raw.get("orig", False))
     if kind == "card":
         ev["text"] = str(raw.get("text", "Текст"))[:CARD_TEXT_MAX] or "Текст"
+    if kind == "fx":
+        ev["kind"] = raw.get("kind") if raw.get("kind") in FX.KINDS else "blur"
+        ev["beat"] = raw.get("beat") is True
+    if kind == "camera":
+        ev["ease"] = _ease(raw.get("ease"))
+    if kind == "transition":
+        ev["kind"] = raw.get("kind") if raw.get("kind") in CN.KINDS else "fade"
+        ev["mode"] = raw.get("mode") if raw.get("mode") in CN.MODES else "out"
+        ev["ease"] = _ease(raw.get("ease"))
+        ev["skip"] = raw.get("skip") is not False
+    if kind == "pack":
+        pid = raw.get("pack", "")
+        ev["pack"] = pid[:40] if isinstance(pid, str) else ""
+        ev["params"] = _params_dict(raw.get("params"))
     return ev
+
+
+def _ease(name):
+    return name if name in AN.EASES else AN.DEFAULT_EASE
+
+
+def _params_dict(raw):
+    """Значения параметров пакета: до 8 записей, имя до 16 символов, только настоящие числа."""
+    out = {}
+    if not isinstance(raw, dict):
+        return out
+    for k, v in list(raw.items())[:8]:
+        if not isinstance(k, str) or len(k) > 16:
+            continue
+        if isinstance(v, bool) or not isinstance(v, (int, float)):
+            continue
+        if v != v or v in (float("inf"), float("-inf")):
+            continue
+        out[k] = float(v)
+    return out
 
 
 def total_ms(ev):
@@ -183,7 +272,7 @@ def image_surface(name, width, bright=1.0, height=None):
         return surf
     if name not in _src:
         try:
-            _src[name] = pygame.image.load(os.path.join(IMAGE_DIR, name)).convert_alpha()
+            _src[name] = pygame.image.load(image_path(name) or os.path.join(IMAGE_DIR, name)).convert_alpha()
         except (pygame.error, OSError):
             _src[name] = None
     src = _src[name]
@@ -239,7 +328,7 @@ def image_state(ev, elapsed):
         alpha = _clamp01(min(elapsed / fade, (dur - elapsed) / fade))
     p = elapsed / dur
     if ev.get("full"):
-        return alpha, 0, 0                     # на весь экран: не двигается и не смещается
+        return alpha, 0, 0
     if ev["anim"] == "drift":
         p = p * p * (3 - 2 * p)
         return alpha, ev["x"] + ev["dx"] * p, ev["y"] + ev["dy"] * p
@@ -316,7 +405,7 @@ def prewarm(events_list):
             w, h = media_size(ev)
             image_surface(ev["file"], w, media_bright(), h)
         elif ev["type"] == "video":
-            path = os.path.join(IMAGE_DIR, ev["file"])
+            path = image_path(ev["file"]) or os.path.join(IMAGE_DIR, ev["file"])
             video.prepare(path, (path, ev["t"]))
 
 
@@ -366,27 +455,52 @@ def media_bright():
     return 1.0 - settings.get("media_dim") / 100.0
 
 
-def draw_media(surface, ev, elapsed):
-    alpha, ox, oy = image_state(ev, elapsed)
+def media_pose(ev, elapsed, anims=None):
+    """Альфа 0..1, смещение x и y, масштаб %, поворот в градусах и цвет умножения картинки в момент elapsed.
+
+    Если у события задан anim_id и такая анимация есть в чарте, её значения заменяют пресеты «ПЛАВНО /
+    РЕЗКО / ДВИЖЕНИЕ»; смещение самого события прибавляется. Иначе работают прежние пресеты."""
+    anim = anims.get(ev["anim_id"]) if anims and ev.get("anim_id") else None
+    if anim is None:
+        alpha, ox, oy = image_state(ev, elapsed)
+        return alpha, ox, oy, 100, 0, TINT_NONE
+    if elapsed < 0 or elapsed >= ev["dur"]:
+        return 0.0, 0, 0, 100, 0, TINT_NONE
+    vals = AN.sample(anim, elapsed)
+    base_x = 0 if ev.get("full") else ev["x"]
+    base_y = 0 if ev.get("full") else ev["y"]
+    return (vals["alpha"] / 100.0, base_x + vals["x"], base_y + vals["y"],
+            vals["scale"], vals["rot"], tuple(vals["tint"]))
+
+
+def draw_media(surface, ev, elapsed, anims=None):
+    alpha, ox, oy, scale, rot, tint = media_pose(ev, elapsed, anims)
     if alpha <= 0 or not ev.get("file"):
         return
     bright = media_bright()
     w, h = media_size(ev)
     if ev["type"] == "video":
-        path = os.path.join(IMAGE_DIR, ev["file"])
+        path = image_path(ev["file"]) or os.path.join(IMAGE_DIR, ev["file"])
         img = video.frame(path, (path, ev["t"]), elapsed, w, h, bright)
     else:
         img = image_surface(ev["file"], w, bright, h)
     if img is None:
         return
+    if scale != 100 or rot:
+        img = pygame.transform.rotozoom(img, rot, scale / 100.0)
+    if ev.get("look"):
+        img = FX.look(img, ev["look"], ev.get("look_amt", 0), elapsed)
+    if tuple(tint) != TINT_NONE:
+        img = img.copy()
+        img.fill(tuple(tint) + (255,), special_flags=pygame.BLEND_RGB_MULT)
     img.set_alpha(int(255 * alpha))
-    surface.blit(img, (C.WIDTH // 2 + SS.U(ox) - img.get_width() // 2,
-                       C.HEIGHT // 2 + SS.U(oy) - img.get_height() // 2))
+    surface.blit(img, (C.WIDTH // 2 + SS.U(round(ox)) - img.get_width() // 2,
+                       C.HEIGHT // 2 + SS.U(round(oy)) - img.get_height() // 2))
 
 
-def draw_images(surface, images):
+def draw_images(surface, images, anims=None):
     for ev, elapsed in images:
-        draw_media(surface, ev, elapsed)
+        draw_media(surface, ev, elapsed, anims)
 
 
 def draw_cards(surface, cards):
@@ -400,7 +514,7 @@ _natural = {}
 def natural_size(ev):
     if not ev.get("file"):
         return None
-    path = os.path.join(IMAGE_DIR, ev["file"])
+    path = image_path(ev["file"]) or os.path.join(IMAGE_DIR, ev["file"])
     if ev["type"] == "video":
         return video.size(path)
     if path not in _natural:

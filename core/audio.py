@@ -39,22 +39,17 @@ def play(name, volume=0.6):
 
 _music_path = None
 
-# --- Воспроизведение песни -------------------------------------------------------------------------
-# Потоковый mixer.music.play(start=...) для WAV отбрасывает дробную часть секунд (измерено: старт с 7.3 с
-# играет с 7.0 с, ошибка до 1 с). Замедленные дорожки — именно WAV, поэтому в редакторе звук «уезжал» от нот.
-# Поэтому PCM-WAV (формат которых совпадает с микшером) играются из памяти: срез сэмплов с нужной позиции,
-# точно до сэмпла. Остальные форматы (MP3/OGG, если кэш PCM недоступен) идут через mixer.music как раньше.
 
 SONG_CHANNEL = 0
 _pcm = {"path": None, "raw": None, "frame": 0, "freq": 0}
 _snd = None
-_exact = False                      # сейчас играет песня из памяти (а не поток)
+_exact = False
 
 
 def _reserve_channel():
     try:
         if pygame.mixer.get_num_channels() > SONG_CHANNEL:
-            pygame.mixer.set_reserved(SONG_CHANNEL + 1)       # эффекты не займут канал песни
+            pygame.mixer.set_reserved(SONG_CHANNEL + 1)
     except Exception:
         pass
 
@@ -106,7 +101,7 @@ def play_song(path, start_ms=0.0):
             offset = int(round(start_ms / 1000.0 * _pcm["freq"])) * fb
             if offset >= len(raw):
                 _music_path, _exact = path, True
-                return                                        # позиция за концом песни — тишина
+                return
             _snd = pygame.mixer.Sound(buffer=memoryview(raw)[offset:])
             _snd.set_volume(_music_volume())
             pygame.mixer.Channel(SONG_CHANNEL).play(_snd)
@@ -127,6 +122,17 @@ def set_music_volume():
         pygame.mixer.music.set_volume(_music_volume())
         if _snd is not None:
             _snd.set_volume(_music_volume())
+    except Exception:
+        pass
+
+
+def set_duck(level):
+    """Приглушает песню до доли громкости из настроек: переходы гасят звук вместе с экраном."""
+    level = max(0.0, min(1.0, float(level)))
+    try:
+        pygame.mixer.music.set_volume(_music_volume() * level)
+        if _snd is not None:
+            _snd.set_volume(_music_volume() * level)
     except Exception:
         pass
 

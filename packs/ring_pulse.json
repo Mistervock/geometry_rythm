@@ -1,0 +1,15 @@
+{
+  "format": "geometry-rhythm-pack",
+  "api": 1,
+  "id": "ring_pulse",
+  "name": "Кольцо-пульс",
+  "description": "Одно кольцо, которое растёт и гаснет. Подходит для акцентов на долях.",
+  "dur": 900,
+  "params": [
+    {"id": "size", "name": "Радиус, px", "min": 60, "max": 300, "step": 10, "default": 160},
+    {"id": "width", "name": "Толщина, px", "min": 2, "max": 24, "step": 1, "default": 8}
+  ],
+  "layers": [
+    {"kind": "ring", "start": 0, "end": 1, "radius": [0, "$size"], "width": "$width", "alpha": [255, 0], "colour": "$colour"}
+  ]
+}

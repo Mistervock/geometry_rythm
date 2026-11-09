@@ -6,6 +6,7 @@ import sys
 import pygame
 
 import config as C
+import dialogs
 import display
 import keymap
 import records
@@ -78,7 +79,8 @@ def main_menu(clock):
                 elif keymap.hit("confirm", ev.key):
                     return buttons[selected][0]
                 elif keymap.hit("back", ev.key):
-                    return "quit"
+                    if dialogs.leave_game(clock):
+                        return "quit"
             if ev.type == pygame.MOUSEMOTION:
                 for i, (_, btn) in enumerate(buttons):
                     if btn.hovered(ev.pos):

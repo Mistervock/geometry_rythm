@@ -25,13 +25,13 @@ def test_due_logic_does_not_spam_disk(tmp_path):
     clk = Clock()
     ch = mk()
     a = A.Autosaver(ch, directory=str(tmp_path / "as"), clock=clk, threaded=False)
-    assert not a.due(0)                      # первая правка только запускает отсчёт
+    assert not a.due(0)
     clk.t += 5
     assert not a.due(0)
     clk.t += A.INTERVAL
     assert a.due(0)
     a.save(0)
-    assert a.writes == 1 and not a.due(0)    # та же ревизия — писать нечего
+    assert a.writes == 1 and not a.due(0)
     clk.t += 100
     assert not a.due(0)
     assert not a.due(1) or True
@@ -48,7 +48,7 @@ def test_important_change_is_debounced(tmp_path):
     clk.t += 10
     assert a.due(1, important=True)
     a.save(1)
-    assert not a.due(2, important=True)      # слишком рано после прошлой записи
+    assert not a.due(2, important=True)
     clk.t += A.IMPORTANT_DEBOUNCE + 0.1
     assert a.due(2, important=True)
 
@@ -83,7 +83,7 @@ def test_write_error_sets_error_state_and_retries(tmp_path):
     a = A.Autosaver(mk(), directory=str(blocker / "sub"), threaded=False)
     a.save(1)
     assert a.state == "error" and a.error
-    assert a.saved_rev == -1                 # будет повторная попытка
+    assert a.saved_rev == -1
 
 
 def test_generation_rotation(tmp_path, monkeypatch):
@@ -97,7 +97,6 @@ def test_generation_rotation(tmp_path, monkeypatch):
     assert os.path.exists(A.path_for(str(tmp_path), a.key, 1))
     prev = json.load(open(A.path_for(str(tmp_path), a.key, 1), encoding="utf-8"))
     assert prev["notes"] == 3
-    # свежая запись перезаписывается на месте, без нового поколения
     a.save(3)
     assert not os.path.exists(A.path_for(str(tmp_path), a.key, 2))
 
@@ -119,7 +118,7 @@ def test_scan_finds_newer_and_restore_in_place_only_after_user_saves(tmp_path, d
     rec = recs[0]
     restored = A.restore_chart(rec)
     assert len(restored.notes) == 4 and restored.path == ch.path
-    assert open(ch.path, "rb").read() == orig_bytes          # исходный файл не тронут восстановлением
+    assert open(ch.path, "rb").read() == orig_bytes
 
 
 def test_identical_autosave_is_stale_and_removed(tmp_path, data_root):
@@ -138,12 +137,12 @@ def test_conflict_when_source_changed_restores_as_copy(tmp_path, data_root):
     a.save(1)
     other = songs.charts_for("a.ogg")[0]
     other.notes.append(chartmod.Note(7777, 2))
-    songs.save_chart(other)                                   # кто-то сохранил исходный чарт после автосейва
+    songs.save_chart(other)
     rec = A.scan(str(tmp_path), songs.CHART_DIR)[0]
     assert rec.status == A.CONFLICT and not rec.can_restore_in_place
     restored = A.restore_chart(rec)
-    assert restored.path is None and "восстан" in restored.name
-    assert restored.id == ""                                  # не наследует идентификатор чужого файла
+    assert restored.path is None and ("восстан" in restored.name or "restored" in restored.name)
+    assert restored.id == ""
 
 
 def test_orphan_and_draft_restore_as_new(tmp_path, data_root):
@@ -166,7 +165,6 @@ def test_same_file_name_different_chart_does_not_get_overwritten(tmp_path, data_
     a = A.Autosaver(ch, directory=str(tmp_path), threaded=False)
     ch.notes.append(chartmod.Note(1, 1))
     a.save(1)
-    # файл с тем же именем подменили чартом другой песни
     data = json.load(open(ch.path, encoding="utf-8"))
     data["song"] = "other.ogg"
     json.dump(data, open(ch.path, "w", encoding="utf-8"))
@@ -187,7 +185,7 @@ def test_corrupt_current_falls_back_to_older_generation(tmp_path, data_root):
     a.save(2)
     open(p0, "w").write("{broken json")
     rec = A.scan(str(tmp_path), songs.CHART_DIR)[0]
-    assert rec.status == A.NEWER and rec.env["notes"] == 4     # вернулись к предыдущему поколению
+    assert rec.status == A.NEWER and rec.env["notes"] == 4
 
 
 def test_fully_corrupt_autosave_does_not_crash(tmp_path, data_root):

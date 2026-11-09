@@ -19,8 +19,10 @@ DEFAULTS = {
     "resolution": "1280x720",
     "preview": 1,
     "ghost": 1,
+    "ghost_alpha": 100,
     "autosave": 1,
     "media_dim": 45,
+    "fx_quality": 2,
     "keys": {},
 }
 
@@ -30,16 +32,18 @@ LIMITS = {
     "music_volume": (0, 100, 5),
     "sfx_volume": (0, 100, 5),
     "media_dim": (0, 90, 5),
+    "ghost_alpha": (20, 100, 10),
+    "fx_quality": (0, 2, 1),
 }
 
 _data = None
-load_report = V.Report("settings")      # итог проверки settings.json при запуске (для диагностики)
+load_report = V.Report("settings")
 
 
 def _load():
     global _data, load_report
     if _data is None:
-        raw = jsonio.load(PATH, None, expect=dict)      # битый файл уходит в карантин, а не затирается
+        raw = jsonio.load(PATH, None, expect=dict)
         _data, load_report = V.check_settings(raw, DEFAULTS, LIMITS)
         _data = dict(_data)
         _sanitize()

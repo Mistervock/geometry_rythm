@@ -95,7 +95,6 @@ def test_results_both_tabs_and_exit(env, monkeypatch):
     out["pb_timeline"] = [(1000, 100, 1), (5000, 3000, 20)]
     out["unlocked"] = ["Тест"]
     out["rank"] = {"grade": "S", "best": "S", "new": True, "prev": None, "song": "S"}
-    # записи в таблицу рекордов не будет (ввод имени): ESC → пропуск; затем TAB, потом M
     feed(monkeypatch, {200: [K(pygame.K_ESCAPE)], 210: [K(pygame.K_TAB)], 220: [K(pygame.K_TAB)],
                        225: [K(pygame.K_TAB)], 240: [K(pygame.K_m)]})
     monkeypatch.setattr(results.records, "qualifies", lambda s: True)
@@ -150,13 +149,13 @@ def test_history_records_launch_vs_finish_and_resolve(env, monkeypatch):
     e2 = lib.start_run(ch, "practice")
     lib.finish_run(e2, {"score": 123, "acc": 90.5, "grade": "A", "failed": False})
     hist = lib.history()
-    assert [h["result"] is None for h in hist] == [False, True]      # новые сверху; незавершённый — без результата
+    assert [h["result"] is None for h in hist] == [False, True]
     found = lib.resolve(hist[1])
     assert found and found[0] == "t.wav" and found[1].name == ch.name
     feed(monkeypatch, {5: [K(pygame.K_DOWN)], 6: [K(pygame.K_DELETE)], 8: [K(pygame.K_ESCAPE)]})
     assert history_screen.run(pygame.time.Clock()) is None
     assert len(library.get().history()) == 1
-    library.reset_for_tests(str(env / "library.json"))                 # перечитать с диска
+    library.reset_for_tests(str(env / "library.json"))
     assert len(library.get().history()) == 1
 
 
@@ -177,7 +176,6 @@ def test_achievements_screen_both_tabs(env, monkeypatch):
 def test_songs_screen_favorite_and_play(env, monkeypatch):
     import songs_screen
     mkchart()
-    # открыть песню (Enter), отметить чарт (B), закрыть и выбрать ИГРАТЬ через Enter
     feed(monkeypatch, {5: [K(pygame.K_RETURN)], 12: [K(pygame.K_b)], 14: [K(pygame.K_RETURN)]})
     res = songs_screen.songs_screen(pygame.time.Clock())
     assert res[0] == "play" and res[2] == "play"
@@ -198,7 +196,7 @@ def test_songs_screen_practice_key(env, monkeypatch):
 def test_settings_and_menu_render(env, monkeypatch):
     import menu
     import settings_screen
-    feed(monkeypatch, {200: [K(pygame.K_ESCAPE)]})
+    feed(monkeypatch, {200: [K(pygame.K_ESCAPE)], 210: [K(pygame.K_LEFT)], 212: [K(pygame.K_RETURN)]})
     assert menu.main_menu(pygame.time.Clock()) == "quit"
     feed(monkeypatch, {10: [K(pygame.K_ESCAPE)]})
     settings_screen.settings_screen(pygame.time.Clock())

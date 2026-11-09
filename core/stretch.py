@@ -36,16 +36,72 @@ def _stamp(song_path):
 
 def path_for(song_path, speed):
     base = _safe(os.path.splitext(os.path.basename(song_path))[0])
-    return os.path.join(DIR, f"{base}_{_stamp(song_path)}_{int(round(speed * 100))}.wav")
+    return os.path.join(DIR, f"{base}_{_stamp(song_path)}_{int(round(speed * 100))}_w{ALGO}.wav")
+
+
+ALGO = 2
+
+
+#-- Растяжение во времени без изменения тона (WSOLA)
+
+WSOLA_N = 1024
+WSOLA_SS = WSOLA_N // 4
+WSOLA_TOL = 128
+
+
+def wsola(arr, speed):
+    """arr: (n, ch) int16 → (m, ch) int16, m ≈ n / speed. Поиск совпадения по моно-сумме, сдвиг общий для каналов."""
+    n, ch = arr.shape
+    x = arr.astype(np.float32)
+    mono = x.mean(axis=1)
+    out_len = int(round(n / speed))
+    N, SS, TOL = WSOLA_N, WSOLA_SS, WSOLA_TOL
+    OV = N - SS
+    win = np.hanning(N).astype(np.float32)
+    out = np.zeros((out_len + N, ch), dtype=np.float32)
+    norm = np.zeros(out_len + N, dtype=np.float32)
+    sa = SS * speed
+    pad = np.zeros((n + N + 2 * TOL, ch), dtype=np.float32)
+    pad[TOL:TOL + n] = x
+    mono_pad = np.zeros(n + N + 2 * TOL, dtype=np.float32)
+    mono_pad[TOL:TOL + n] = mono
+    from numpy.lib.stride_tricks import sliding_window_view
+    frames = sliding_window_view(mono_pad, OV)
+    c_prev = 0
+    k = 0
+    while True:
+        y = k * SS
+        if y >= out_len:
+            break
+        if k == 0:
+            c = 0
+        else:
+            tmpl = mono_pad[TOL + c_prev + SS: TOL + c_prev + SS + OV]
+            ideal = int(round(k * sa))
+            lo = max(0, ideal - TOL)
+            hi = min(n - 1, ideal + TOL)
+            if hi <= lo:
+                c = max(0, min(n - 1, ideal))
+            else:
+                cands = frames[TOL + lo: TOL + hi + 1]
+                num = cands @ tmpl
+                den = np.sqrt((cands * cands).sum(axis=1)) * (np.sqrt((tmpl * tmpl).sum()) + 1e-9) + 1e-9
+                offs = np.abs(np.arange(lo, hi + 1) - ideal)
+                score = num / den - 1e-3 * offs / TOL
+                c = lo + int(np.argmax(score))
+        seg = pad[TOL + c: TOL + c + N]
+        if seg.shape[0] < N:
+            seg = np.pad(seg, ((0, N - seg.shape[0]), (0, 0)))
+        out[y:y + N] += seg * win[:, None]
+        norm[y:y + N] += win
+        c_prev = c
+        k += 1
+    norm = np.maximum(norm, 1e-6)
+    res = out[:out_len] / norm[:out_len, None]
+    return np.clip(res, -32768, 32767).astype(np.int16)
 
 
 #-- Единая временная шкала звука
-#
-# Потоковое воспроизведение сжатой музыки (MP3/OGG) и декодирование целиком дают РАЗНУЮ задержку начала
-# (по измерениям 20-45 мс), а перемотка потока (play(start=...)) ещё и отличается от старта с нуля.
-# Из-за этого при смене скорости в редакторе звук «уезжал» относительно нот. Поэтому ВСЕ скорости, включая
-# обычную 1x, играют из одного и того же полного декодирования (PCM WAV в кэше): позиция в файле всегда
-# точно соответствует времени чарта, а перемотка точная до сэмпла.
 
 def ensure(song_path, speed):
     """Путь к PCM-WAV песни со скоростью speed (1.0 — точная копия декодирования). None — если нельзя."""
@@ -54,7 +110,7 @@ def ensure(song_path, speed):
     out = path_for(song_path, speed)
     if os.path.exists(out):
         try:
-            os.utime(out)                      # «недавно использован» — prune удаляет самые давние
+            os.utime(out)
         except OSError:
             pass
         return out
@@ -68,12 +124,7 @@ def ensure(song_path, speed):
         if speed == 1.0:
             res = arr
         else:
-            arr = arr.astype(np.float32)
-            x = np.arange(int(n / speed)) * speed
-            i0 = np.minimum(np.floor(x).astype(np.int64), n - 2)
-            frac = (x - i0).astype(np.float32)[:, None]
-            res = arr[i0] * (1.0 - frac) + arr[i0 + 1] * frac
-            res = np.clip(res, -32768, 32767).astype(np.int16)
+            res = wsola(arr, speed)
         os.makedirs(DIR, exist_ok=True)
         tmp = out + ".tmp"
         with wave.open(tmp, "wb") as w:

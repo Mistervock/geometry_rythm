@@ -1,18 +1,13 @@
 #-- Привязка клавиш меню и редактора
-# Действие -> список клавиш (по именам pygame). Первая клавиша главная: именно её меняют в настройках,
-# остальные остаются запасными. Стрелки, Enter и Esc в меню работают всегда, чтобы нельзя было
-# заблокировать себя неудачной привязкой. Дорожки игры настраиваются отдельно (settings.lane_keys).
 import pygame
 
 import settings
 
 MENU, SONGS, EDITOR = "menu", "songs", "editor"
 SECTIONS = (MENU, SONGS, EDITOR)
-# Вкладки экрана: вкладка -> разделы. Меню и список песен делят одно пространство клавиш.
 TABS = (("menu", (MENU, SONGS)), ("editor", (EDITOR,)))
 GROUP = {MENU: "ui", SONGS: "ui", EDITOR: "editor"}
 
-# (id, раздел, подпись, клавиши по умолчанию, запасные клавиши, нужен Ctrl)
 _RAW = (
     ("up", MENU, "Вверх", ("up", "w"), ("up",), False),
     ("down", MENU, "Вниз", ("down", "s"), ("down",), False),
@@ -31,6 +26,7 @@ _RAW = (
     ("new_chart", SONGS, "Новый чарт", ("n",), (), False),
     ("delete_chart", SONGS, "Удалить чарт", ("delete",), (), False),
     ("play", EDITOR, "Играть / пауза", ("space",), (), False),
+    ("test_here", EDITOR, "Тест с курсора (без записи)", ("f5",), (), False),
     ("save", EDITOR, "Сохранить (с Ctrl)", ("s",), (), True),
     ("undo", EDITOR, "Отмена (с Ctrl)", ("z",), (), True),
     ("seek_left", EDITOR, "Курсор назад", ("left",), (), False),
@@ -68,7 +64,7 @@ ACTIONS = {a[0]: {"id": a[0], "section": a[1], "label": a[2], "default": tuple(a
                   "fallback": tuple(a[4]), "ctrl": a[5]} for a in _RAW}
 ORDER = [a[0] for a in _RAW]
 
-RESERVED = {"escape", "f1", "f3"}      # Esc отменяет ввод, F1 и F3 — общие клавиши окна
+RESERVED = {"escape", "f1", "f3"}
 _MODIFIERS = {"left shift", "right shift", "left ctrl", "right ctrl", "left alt", "right alt",
               "left meta", "right meta", "caps lock", "left super", "right super", "numlock"}
 
@@ -177,7 +173,7 @@ def rebind(action, name):
             continue
         if on[0] == name:
             on[0] = old_primary if old_primary not in on else on[0]
-            if on[0] == name:            # старая клавиша уже есть у соседа — берём его запасную
+            if on[0] == name:
                 on = [n for n in on if n != name] or list(ACTIONS[other]["default"])
         else:
             on.remove(name)

@@ -9,5 +9,12 @@
     "j",
     "k"
   ],
-  "lang": "en"
+  "lang": "en",
+  "fullscreen": 0,
+  "resolution": "1280x720",
+  "preview": 1,
+  "ghost": 1,
+  "autosave": 1,
+  "media_dim": 45,
+  "keys": {}
 }

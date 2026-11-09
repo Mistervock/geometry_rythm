@@ -23,7 +23,7 @@ def root(*parts):
 
 
 TITLE = "Geometry Rhythm"
-VERSION = "0.2"
+VERSION = "1.0"
 WIDTH, HEIGHT = SS.apply_name(SS.read_saved(root("data", "settings.json")))
 UI_FONT_SCALE = 1.2
 FPS = 60

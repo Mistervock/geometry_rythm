@@ -7,6 +7,7 @@ import pygame
 import audio
 import config as C
 import display
+import modifiers as MD
 import records
 import results_stats
 import screen_setting as SS
@@ -63,7 +64,8 @@ def results_screen(clock, res):
                 if saved is None and can_record:
                     if ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                         entries, entry = records.add(name, score, res["acc"], grade,
-                                                     res.get("song", ""), res.get("chart", ""))
+                                                     res.get("song", ""),
+                                                     res.get("chart", "") + MD.tag(res.get("mods", [])))
                         saved = (entries, entry)
                     elif ev.key == pygame.K_BACKSPACE:
                         name = name[:-1]

@@ -18,7 +18,7 @@ import pygame
 import config as C
 import screen_setting as SS
 
-FAR = 4000          # дальше этого за краем экрана концы не рисуем — они всё равно не видны
+FAR = 4000
 
 
 def _mix(a, b, k):

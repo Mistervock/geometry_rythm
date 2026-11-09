@@ -18,7 +18,6 @@ VISIBLE = 5
 ROW = 76
 FIELDS = ("name", "description", "image")
 TEXT_LIMITS = {"name": achievements.NAME_MAX, "description": achievements.DESC_MAX}
-# Расчётные прямоугольники (x, y, w, h); в пиксели переводит SS.UR при использовании
 SAVE_RECT = (SS.REF_W // 2 - 190, 500, 180, 44)
 CANCEL_RECT = (SS.REF_W // 2 + 10, 500, 180, 44)
 FIELD_RECT = {

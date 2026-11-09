@@ -6,6 +6,7 @@ import random
 import pygame
 
 import config as C
+import retro
 import screen_setting as SS
 
 _fonts = {}
@@ -85,6 +86,9 @@ def post_fx(surface, frame, grain=50, lines=True):
     global _band
     if lines and SCANLINES:
         surface.blit(_scan_multiply(), (0, 0), special_flags=pygame.BLEND_MULT)
+        vig = retro.vignette()
+        if vig is not None:
+            surface.blit(vig, (0, 0), special_flags=pygame.BLEND_MULT)
     for _ in range(grain):
         c = random.randint(15, 55)
         surface.set_at((random.randrange(C.WIDTH), random.randrange(C.HEIGHT)), (c, c, c))

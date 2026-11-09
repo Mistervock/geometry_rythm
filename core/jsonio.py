@@ -17,11 +17,29 @@ import math
 import os
 import time
 
+
+_busy = False
+
+
+def _t(text):
+    """Перевод сообщения. Импорт локальный (i18n тянет settings, а settings читает файлы через этот модуль).
+    Повторный вход возвращает русский текст — так цикл settings → jsonio → _t не образуется."""
+    global _busy
+    if _busy:
+        return text
+    _busy = True
+    try:
+        from i18n import t
+        return t(text)
+    except Exception:
+        return text
+    finally:
+        _busy = False
+
 KEEP_CORRUPT = 5
 
 MISSING, ACCESS, SYNTAX, EMPTY, TYPE = "missing", "access", "syntax", "empty", "type"
 
-# Последние проблемы чтения/записи (для отладки и вывода в интерфейсе). Кольцевой журнал.
 _problems = []
 MAX_PROBLEMS = 50
 
@@ -61,26 +79,25 @@ def read(path):
         with open(path, "r", encoding="utf-8") as f:
             text = f.read()
     except FileNotFoundError:
-        return ReadResult(False, None, MISSING, "файл не найден", path)
+        return ReadResult(False, None, MISSING, _t("файл не найден"), path)
     except UnicodeDecodeError as e:
-        return ReadResult(False, None, SYNTAX, f"не UTF-8: {e}", path)
+        return ReadResult(False, None, SYNTAX, f"{_t('не UTF-8')}: {e}", path)
     except OSError as e:
         return ReadResult(False, None, ACCESS, str(e), path)
     if text.startswith("﻿"):
         text = text[1:]
     if not text.strip():
-        return ReadResult(False, None, EMPTY, "файл пуст", path)
+        return ReadResult(False, None, EMPTY, _t("файл пуст"), path)
     try:
         return ReadResult(True, json.loads(text, parse_constant=_reject_constant), None, "", path)
     except ValueError as e:
         return ReadResult(False, None, SYNTAX, f"{e}", path)
     except RecursionError:
-        return ReadResult(False, None, SYNTAX, "слишком глубокая вложенность", path)
+        return ReadResult(False, None, SYNTAX, _t("слишком глубокая вложенность"), path)
 
 
 def _reject_constant(name):
-    # NaN / Infinity допускаются питоновским json по умолчанию, но не являются корректным JSON
-    raise ValueError(f"недопустимое значение {name}")
+    raise ValueError(f"{_t('недопустимое значение')} {name}")
 
 
 def load(path, default=None, expect=None, quarantine_bad=True):
@@ -94,7 +111,7 @@ def load(path, default=None, expect=None, quarantine_bad=True):
     if res.kind == MISSING:
         return default
     if res.ok:
-        res = ReadResult(False, None, TYPE, "неожиданный тип данных", path)
+        res = ReadResult(False, None, TYPE, _t("неожиданный тип данных"), path)
     _note_problem(res.kind, path, res.message)
     if quarantine_bad and res.kind in (SYNTAX, EMPTY, TYPE):
         quarantine(path)
@@ -116,7 +133,7 @@ def write_atomic(path, data, indent=1, retries=3):
     try:
         text = _dump(data, indent)
     except (TypeError, ValueError) as e:
-        raise SaveError(f"данные нельзя сохранить: {e}")
+        raise SaveError(f"{_t('данные нельзя сохранить')}: {e}")
     directory = os.path.dirname(os.path.abspath(path))
     tmp = os.path.join(directory, f".{os.path.basename(path)}.{os.getpid()}.tmp")
     try:
@@ -133,7 +150,7 @@ def write_atomic(path, data, indent=1, retries=3):
             try:
                 os.replace(tmp, path)
                 return
-            except PermissionError as e:           # Windows: файл на миг занят антивирусом/индексатором
+            except PermissionError as e:
                 last = e
                 time.sleep(0.05 * (attempt + 1))
         raise last

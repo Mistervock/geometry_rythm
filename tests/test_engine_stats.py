@@ -37,10 +37,9 @@ def test_broken_hold_counts_in_accuracy():
     e.update(1000)
     e.press(0, 1000)
     e.update(1400)
-    e.release(0, 1400)                 # рано отпустили: хвост сорван
+    e.release(0, 1400)
     run_hit(e, 1, 3000)
     assert e.holds_broken == 1 and e.holds_ok == 0
-    # решения: голова 1.0, хвост 0.0, обычная нота 1.0 → 2/3
     assert abs(e.accuracy() - 100 * 2 / 3) < 1e-9
     assert e.summary()["holds_broken"] == 1 and not e.summary()["full_combo"]
 
@@ -85,11 +84,10 @@ def test_section_reset_has_no_leftovers():
     e.update(1000)
     e.press(1, 1000)
     e.update(1200)
-    e.release(1, 1200)                       # сорвали удержание
+    e.release(1, 1200)
     e.update(2000 + C.WIN_GOOD + 1)
     assert e.counts["miss"] == 1 and e.holds_broken == 1
     assert e.combo == 0
-    # повтор: всё с нуля, ноты не дублируются
     e.start_attempt()
     assert e.total == 2 and e.score == 0 and e.counts["miss"] == 0 and not e.holds and e.judgments == []
     assert all(n.state in ("wait", "skip") for n in notes)
@@ -103,7 +101,7 @@ def test_boundary_notes_inclusive_and_hold_extends_end():
     e.set_section(1000, 2000)
     e.start_attempt()
     assert [n.idx for n in e.active] == [0, 1]
-    assert e.end_time >= 3500                # хвост удержания, начатого внутри участка, не обрезается
+    assert e.end_time >= 3500
 
 
 def test_finish_when_all_done():

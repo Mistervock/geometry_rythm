@@ -27,9 +27,9 @@ def _ev(kind="image", **kw):
 def test_full_flag_defaults_and_normalization():
     assert EV.make("image", 0)["full"] is False
     assert EV.make("video", 0)["full"] is False
-    assert _ev()["full"] is False                         # старые чарты без поля
+    assert _ev()["full"] is False
     assert _ev(full=True)["full"] is True
-    assert _ev(full="yes?")["full"] is False              # мусор не включает режим
+    assert _ev(full="yes?")["full"] is False
     assert "full" not in EV.normalize({"type": "flash", "t": 0})
 
 
@@ -65,7 +65,7 @@ def test_full_image_covers_every_corner(img_dir):
                 (C.WIDTH // 2, C.HEIGHT // 2)):
         assert scr.get_at(pos)[0] > 100, pos
     scr.fill((0, 0, 0))
-    EV.draw_media(scr, _ev(), 500)                        # обычный режим — углы пустые
+    EV.draw_media(scr, _ev(), 500)
     assert scr.get_at((0, 0))[0] == 0
 
 
@@ -102,17 +102,69 @@ def test_events_screen_toggle_and_fields(img_dir, monkeypatch):
     scr = ES.EventsScreen(pygame.time.Clock(), ch, 0, 60000)
     scr._add("video")
     keys = [r[0] for r in scr._fields()]
-    assert keys[-1] == "full" and len(keys) == 12
-    assert scr._fstep() < ES.FIELD_STEP                   # 12 строк: теснее, чтобы влезли
+    assert keys[-1] == "full" and len(keys) == 15
+    assert scr._fstep() < ES.FIELD_STEP
     scr._adjust("full", None, None, None, 1)
     assert scr.cur["full"] is True
     scr._adjust("full", None, None, None, 1)
     assert scr.cur["full"] is False
     scr._add("image")
-    assert len(scr._fields()) == 11 and scr._fstep() == ES.FIELD_STEP
+    assert len(scr._fields()) == 14 and scr._fstep() == ES.FIELD_STEP_DENSE
     scr.cur["full"] = True
-    scr._fit()                                            # не падает
+    scr._fit()
     for kind in ("video", "image"):
         scr._add(kind)
         scr.cur["full"] = True
         scr._draw((5, 5))
+
+
+def _screen(chart_events):
+    import events_screen as ES
+    import chart as chartmod
+    ch = chartmod.Chart("game.ogg")
+    ch.events.extend(chart_events)
+    return ES, ES.EventsScreen(pygame.time.Clock(), ch, 5000, 60000), ch
+
+
+def test_opens_on_event_nearest_cursor():
+    evs = [EV.make("flash", 1000), EV.make("flash", 4800), EV.make("glitch", 20000)]
+    ES, scr, _ = _screen(evs)
+    assert scr.cur["t"] == 4800
+
+
+def test_type_filter_shows_only_that_kind_and_toggles_off():
+    evs = [EV.make("flash", 1000), EV.make("glitch", 2000), EV.make("flash", 3000)]
+    ES, scr, _ = _screen(evs)
+    scr._draw((0, 0))
+    assert "flash" in scr.stat_rects
+    scr._click(_center(scr.stat_rects["flash"]))
+    assert scr.kind_filter == "flash"
+    rows = scr._view()
+    assert len(rows) == 2 and all(k == "event" and p["type"] == "flash" for k, p in rows)
+    scr._click(_center(scr.stat_rects["flash"]))
+    assert scr.kind_filter is None
+
+
+def test_adding_other_kind_clears_filter():
+    ES, scr, _ = _screen([EV.make("flash", 1000)])
+    scr.kind_filter = "flash"
+    scr._add("glitch")
+    assert scr.kind_filter is None
+
+
+def test_page_and_home_end_keys_move_selection():
+    evs = [EV.make("flash", 100 * i) for i in range(30)]
+    ES, scr, _ = _screen(evs)
+    scr.cur = scr._view()[0][1]
+    scr._key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_PAGEDOWN, mod=0, unicode="", scancode=0))
+    assert scr._sel_index(scr._view()) == ES.MAX_T_SHOWN
+    scr._key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_END, mod=0, unicode="", scancode=0))
+    assert scr._sel_index(scr._view()) == len(evs) - 1
+    scr._key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_HOME, mod=0, unicode="", scancode=0))
+    assert scr._sel_index(scr._view()) == 0
+
+
+def _center(rect):
+    """Координаты центра прямоугольника в расчётной раскладке → экранные (как приходит от мыши)."""
+    import screen_setting as SS
+    return (int(rect.centerx * SS.SCALE), int(rect.centery * SS.SCALE))
